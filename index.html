@@ -63,12 +63,12 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 
 <section class="dashboard" id="dashboard">
   <div class="head"><div><div class="kicker">PLATFORM OWNER</div><h2>CONTROL ROOM.</h2></div><p>See what is happening across the marketplace: events, buyers, sales and your commission.</p></div>
-  <div class="dash-grid"><div class="stat"><b id="activeEvents">128</b><span>Active events</span></div><div class="stat"><b id="ticketsSold">18,492</b><span>Tickets sold</span></div><div class="stat"><b>3,741</b><span>Customers</span></div><div class="stat"><b id="commission">KSh 924K</b><span>Commission earned</span></div></div>
+  <div class="dash-grid"><div class="stat"><b id="activeEvents">0</b><span>Active events</span></div><div class="stat"><b id="ticketsSold">0</b><span>Tickets sold</span></div><div class="stat"><b>0</b><span>Customers</span></div><div class="stat"><b id="commission">KSh 0</b><span>Commission earned</span></div></div>
   <div class="dash-panel">
     <div class="tabs"><button class="tab active" onclick="showDash('sales',this)">Sales</button><button class="tab" onclick="showDash('eventsDash',this)">My Events</button><button class="tab" onclick="showDash('payouts',this)">Payouts</button><button class="tab" onclick="openVerify()">VERIFY TICKET</button></div>
-    <div id="sales"><h3>Recent event sales</h3><table class="table"><thead><tr><th>Event</th><th>Organizer</th><th>Tickets</th><th>Gross</th><th>Commission</th></tr></thead><tbody><tr><td>After Dark</td><td>Urban Nights</td><td>842</td><td>KSh 589,400</td><td>KSh 29,470</td></tr><tr><td>Rooftop Sessions</td><td>Urban Nights</td><td>517</td><td>KSh 620,400</td><td>KSh 31,020</td></tr><tr><td>The Big Match</td><td>MatchDay KE</td><td>1,204</td><td>KSh 421,400</td><td>KSh 21,070</td></tr></tbody></table></div>
-    <div id="eventsDash" style="display:none"><h3>Events you manage</h3><div class="mini-grid"><div class="mini"><b>After Dark</b><small>842 tickets sold</small></div><div class="mini"><b>Rooftop Sessions</b><small>517 tickets sold</small></div><div class="mini"><b>The Big Match</b><small>1,204 tickets sold</small></div></div></div>
-    <div id="payouts" style="display:none"><h3>Payouts</h3><div class="mini-grid"><div class="mini"><b>KSh 924K</b><small>Total platform commission</small></div><div class="mini"><b>KSh 180K</b><small>Pending payout</small></div><div class="mini"><b>Weekly</b><small>Payout schedule</small></div></div></div>
+    <div id="sales"><h3>Recent event sales</h3><table class="table"><thead><tr><th>Event</th><th>Organizer</th><th>Tickets</th><th>Gross</th><th>Commission</th></tr></thead><tbody><tr><td colspan="5">No verified sales yet. Sales will appear after real payments are connected.</td></tr></tbody></table></div>
+    <div id="eventsDash" style="display:none"><h3>Events you manage</h3><p class="note">No organizer events are connected yet.</p></div>
+    <div id="payouts" style="display:none"><h3>Payouts</h3><p class="note">Payouts will appear after real payments and settlement are connected.</p></div>
   </div>
 </section>
 
@@ -106,7 +106,147 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 <div class="toast" id="toast"></div>
 
 <script>
-const eventTime=new Date("2026-09-25T20:00:00+03:00").getTime();
-function clock(){let x=eventTime-Date.now();if(x<=0){document.querySelector(".count").innerHTML="<h2 style='grid-column:1/-1;text-align:center'>🔥 EVENT IS LIVE!</h2>";return}d.textContent=String(Math.floor(x/864e5)).padStart(2,"0");h.textContent=String(Math.floor(x/36e5)%24).padStart(2,"0");m.textContent=String(Math.floor(x/6e4)%60).padStart(2,"0");s.textContent=String(Math.floor(x/1e3)%60).padStart(2,"0")}clock();setInterval(clock,1000);
+(function () {
+  "use strict";
+  const $ = (id) => document.getElementById(id);
+  const state = { eventName: "", earlyPrice: 0, regularPrice: 0, earlyQty: 0, regularQty: 0 };
+  let toastTimer;
 
-let quantiti
+  window.toast = function (message) {
+    const el = $("toast");
+    if (!el) return;
+    el.textContent = message;
+    el.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 3200);
+  };
+
+  function openModal(id) {
+    const el = $(id);
+    if (!el) return;
+    el.classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+  window.closeModal = function (id) {
+    const el = $(id);
+    if (!el) return;
+    el.classList.remove("open");
+    if (!document.querySelector(".modal.open")) document.body.style.overflow = "";
+  };
+  window.openOrganizer = () => openModal("orgModal");
+  window.openVerify = function () {
+    openModal("verifyModal");
+    if ($("verifyResult")) $("verifyResult").textContent =
+      "Verification is not connected yet. No ticket has been checked or admitted.";
+  };
+
+  window.filterEvents = function (category, button) {
+    document.querySelectorAll("#eventGrid .card").forEach((card) => {
+      card.hidden = category !== "all" && card.dataset.cat !== category;
+    });
+    document.querySelectorAll(".filters .filter").forEach((el) =>
+      el.classList.toggle("active", el === button));
+  };
+
+  window.openBuy = function (name, early, regular) {
+    state.eventName = String(name || "Event");
+    state.earlyPrice = Number(early) || 0;
+    state.regularPrice = Number(regular) || 0;
+    state.earlyQty = 0;
+    state.regularQty = 0;
+    if ($("buyTitle")) $("buyTitle").textContent = state.eventName;
+    if ($("earlyLabel")) $("earlyLabel").textContent = "KSh " + state.earlyPrice.toLocaleString("en-KE") + " • Limited";
+    if ($("regularLabel")) $("regularLabel").textContent = "KSh " + state.regularPrice.toLocaleString("en-KE");
+    if ($("early")) $("early").textContent = "0";
+    if ($("regular")) $("regular").textContent = "0";
+    if ($("buyTotal")) $("buyTotal").textContent = "KSh 0";
+    openModal("buyModal");
+  };
+
+  window.qty = function (type, change) {
+    const key = type === "early" ? "earlyQty" : type === "regular" ? "regularQty" : null;
+    if (!key) return;
+    state[key] = Math.max(0, Math.min(10, state[key] + Number(change || 0)));
+    if ($(type)) $(type).textContent = String(state[key]);
+    const total = state.earlyQty * state.earlyPrice + state.regularQty * state.regularPrice;
+    if ($("buyTotal")) $("buyTotal").textContent = "KSh " + total.toLocaleString("en-KE");
+  };
+
+  window.checkout = function () {
+    const count = state.earlyQty + state.regularQty;
+    const name = $("buyerName")?.value.trim() || "";
+    const email = $("buyerEmail")?.value.trim() || "";
+    const phone = $("buyerPhone")?.value.trim() || "";
+    if (!count) return toast("Choose at least one ticket first.");
+    if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !phone)
+      return toast("Enter your full name, a valid email and phone number.");
+    toast("Payments are not connected yet. No payment was started and no money was charged.");
+  };
+
+  window.publishEvent = function () {
+    const name = $("orgName")?.value.trim() || "";
+    const date = $("orgDate")?.value || "";
+    const venue = $("orgVenue")?.value.trim() || "";
+    const price = Number($("orgPrice")?.value);
+    const quantity = Number($("orgQty")?.value);
+    const commission = Number($("orgCommission")?.value || 0);
+    if (!name || !date || !venue || $("orgPrice")?.value === "" ||
+        $("orgQty")?.value === "" || !Number.isFinite(price) || price < 0 ||
+        !Number.isInteger(quantity) || quantity < 1 ||
+        !Number.isFinite(commission) || commission < 0 || commission > 100)
+      return toast("Complete the event details and enter valid ticket and commission amounts.");
+    toast("Event publishing is not connected yet. Nothing has been published or saved.");
+  };
+
+  window.verifyTicket = function () {
+    const code = $("verifyCode")?.value.trim() || "";
+    if (!code) {
+      if ($("verifyResult")) $("verifyResult").textContent = "Enter a ticket ID first.";
+      return;
+    }
+    if ($("verifyResult")) $("verifyResult").textContent =
+      "Not verified. Secure ticket verification is not connected, so entry has not been approved.";
+  };
+
+  window.showDash = function (panelId, button) {
+    ["sales", "eventsDash", "payouts"].forEach((id) => {
+      const panel = $(id);
+      if (panel) panel.style.display = id === panelId ? "block" : "none";
+    });
+    document.querySelectorAll(".tabs .tab").forEach((tab) => {
+      if (tab.getAttribute("onclick")?.startsWith("showDash"))
+        tab.classList.toggle("active", tab === button);
+    });
+  };
+
+  const eventTime = new Date("2026-09-25T20:00:00+03:00").getTime();
+  function clock() {
+    const remaining = eventTime - Date.now();
+    if (remaining <= 0) {
+      const count = document.querySelector(".count");
+      if (count) count.innerHTML =
+        "<h2 style='grid-column:1/-1;text-align:center'>EVENT DATE PASSED</h2>";
+      return;
+    }
+    const values = {
+      d: Math.floor(remaining / 86400000),
+      h: Math.floor(remaining / 3600000) % 24,
+      m: Math.floor(remaining / 60000) % 60,
+      s: Math.floor(remaining / 1000) % 60
+    };
+    Object.entries(values).forEach(([id, value]) => {
+      if ($(id)) $(id).textContent = String(value).padStart(2, "0");
+    });
+  }
+  clock();
+  setInterval(clock, 1000);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      document.querySelectorAll(".modal.open").forEach((modal) => closeModal(modal.id));
+    }
+  });
+})();
+</script>
+</body>
+</html>
