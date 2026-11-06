@@ -280,19 +280,35 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const { data: application } = await sb.from("organizer_applications").select("status").eq("user_id",auth.user.id).maybeSingle();
     if ($("applyMessage") && application) $("applyMessage").textContent = "Application status: "+application.status;
   }
+  function showPasswordRecovery() {
+    closeModal("accountModal");
+    openModal("passwordResetModal");
+    if ($("passwordResetMessage")) $("passwordResetMessage").textContent = "Recovery link verified. Enter and confirm your new password.";
+  }
   if (sb) {
     sb.auth.onAuthStateChange((event, session) => {
       if (event === "PASSWORD_RECOVERY" && session) {
-        setTimeout(() => {
-          closeModal("accountModal");
-          openModal("passwordResetModal");
-          if ($("passwordResetMessage")) $("passwordResetMessage").textContent = "Recovery link verified. Enter and confirm your new password.";
-        }, 0);
+        setTimeout(showPasswordRecovery, 0);
       }
       if (event === "SIGNED_IN") {
         setTimeout(() => { loadEvents(); loadDashboard(); }, 0);
       }
     });
+    // Some mobile email apps return to the site after the URL session has
+    // already been processed. Check the recovery marker as a fallback.
+    (async () => {
+      const hash = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+      const query = new URLSearchParams(window.location.search);
+      const isRecovery = hash.get("type") === "recovery" || query.get("type") === "recovery";
+      if (isRecovery) {
+        const { data: sessionData, error: sessionError } = await sb.auth.getSession();
+        if (sessionData?.session && !sessionError) {
+          showPasswordRecovery();
+        } else if ($("passwordResetMessage")) {
+          $("passwordResetMessage").textContent = "This recovery link could not be verified. Request a fresh link and open it in the same browser.";
+        }
+      }
+    })();
     loadEvents();
     loadDashboard();
   }
