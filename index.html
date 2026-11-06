@@ -182,7 +182,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const { data, error } = await sb.auth.signUp({
       email,
       password,
-      options: { data: { full_name: fullName }, emailRedirectTo: "https://stargates.vercel.app" }
+      options: { data: { full_name: fullName }, emailRedirectTo: "https://startgates.vercel.app" }
     });
     if (error) {
       $("authMessage").textContent = error.message;
@@ -216,7 +216,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (!email) return $("authMessage").textContent = "Enter your account email first.";
     $("authMessage").textContent = "Sending a password-reset email...";
     const { error } = await sb.auth.resetPasswordForEmail(email, {
-      redirectTo: "https://stargates.vercel.app"
+      redirectTo: "https://startgates.vercel.app"
     });
     $("authMessage").textContent = error ? error.message : "Password-reset email sent. Open it on this device; StarGates will show a new-password form.";
   };
