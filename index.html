@@ -29,7 +29,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 <body>
 <header>
   <a class="brand" href="#">✦ STAR<i>GATES</i></a>
-  <nav class="nav"><a href="#events">Explore</a><a href="#dashboard">Dashboard</a><a href="#how">How it works</a><button onclick="openAccount()">ACCOUNT</button><button onclick="openOrganizer()">HOST AN EVENT</button></nav>
+  <nav class="nav"><a href="#events">Explore</a><a href="#dashboard">Dashboard</a><a href="#how">How it works</a><button onclick="openAccount()">ACCOUNT</button><button onclick="openApply()">APPLY TO HOST</button></nav>
 </header>
 
 <section class="hero">
@@ -37,7 +37,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     <div class="kicker">THE EVENT MARKETPLACE</div>
     <h1>STAR <span>GATES.</span></h1>
     <p>Discover events. Sell out your event. One place for the people who create the night and the people who live it.</p>
-    <div class="actions"><a class="primary" href="#events">EXPLORE EVENTS</a><button class="secondary" onclick="openOrganizer()">HOST AN EVENT</button></div>
+    <div class="actions"><a class="primary" href="#events">EXPLORE EVENTS</a><button class="secondary" onclick="openApply()">HOST AN EVENT</button></div>
   </div>
 </section>
 
@@ -78,7 +78,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   <div class="steps"><div class="step"><b>01 — Discover</b><span>Find an event, check the details and watch the trailer.</span></div><div class="step"><b>02 — Choose</b><span>Pick your ticket type and quantity, then enter your details.</span></div><div class="step"><b>03 — Get your ticket</b><span>After payment, your unique ticket can be sent straight to your email.</span></div><div class="step"><b>04 — Scan</b><span>Show the QR ticket at the entrance. Staff verify it before entry.</span></div></div>
 </section>
 
-<section><div class="cta"><div><div class="kicker">FOR ORGANIZERS</div><h2>SELL YOUR<br>EVENT.</h2><p>Create your event, choose your own ticket prices and quantities, publish it and watch your sales grow.</p></div><button onclick="openOrganizer()">CREATE AN EVENT →</button></div></section>
+<section><div class="cta"><div><div class="kicker">FOR ORGANIZERS</div><h2>SELL YOUR<br>EVENT.</h2><p>Create your event, choose your own ticket prices and quantities, publish it and watch your sales grow.</p></div><button onclick="openApply()">BECOME AN ORGANIZER →</button></div></section>
 
 <footer><span>© 2026 STARGATES</span><span>EVENTS • TICKETS • COMMUNITY</span></footer>
 
@@ -109,7 +109,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 <div class="sheet-head"><div><div class="kicker">STARGATES ACCOUNT</div><h3>WELCOME.</h3></div><button class="close" onclick="closeModal('accountModal')">×</button></div>
 <div class="form"><label>Email<input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></label><label>Password<input id="authPassword" type="password" autocomplete="current-password" placeholder="At least 8 characters"></label><label>Full name<input id="authName" autocomplete="name" placeholder="Your name"></label><button class="primary" onclick="signIn()">LOG IN</button><button class="secondary" onclick="signUp()">CREATE ACCOUNT</button><p class="note" id="authMessage">Create an account or log in. Check your email if confirmation is required.</p></div>
 </div></div>
-<div class="toast" id="toast"></div>
+<div class="modal" id="applyModal" onclick="if(event.target===this)closeModal('applyModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">JOIN THE MARKETPLACE</div><h3>APPLY TO HOST.</h3></div><button class="close" onclick="closeModal('applyModal')">×</button></div><div class="form"><label>Business / organiser name<input id="applyBusiness" placeholder="Your name or brand"></label><label>Tell us about your events<textarea id="applyReason" placeholder="What kind of events do you organise?"></textarea></label><button class="primary" onclick="applyOrganizer()">SUBMIT APPLICATION</button><p id="applyMessage" class="note">Applications are reviewed before organiser access is granted.</p></div></div></div><div class="toast" id="toast"></div>
 
 <script>
 (function () {
@@ -143,6 +143,21 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (!document.querySelector(".modal.open")) document.body.style.overflow = "";
   };
   window.openAccount = () => openModal("accountModal");
+  window.openApply = () => { openModal("applyModal"); };
+  window.applyOrganizer = async function () {
+    const business = $("applyBusiness")?.value.trim() || "";
+    const reason = $("applyReason")?.value.trim() || "";
+    const { data: auth } = await sb.auth.getUser();
+    if (!auth.user) { closeModal("applyModal"); openModal("accountModal"); return toast("Create an account or log in first."); }
+    if (!business) return $("applyMessage").textContent = "Enter your name or business name.";
+    const { error } = await sb.from("organizer_applications").insert({user_id:auth.user.id,business_name:business,reason});
+    $("applyMessage").textContent = error ? (error.code==="23505" ? "You already have an application on file." : error.message) : "Application submitted. The StarGates team must review it before you can publish events.";
+  };
+  window.signOut = async function () {
+    const { error } = await sb.auth.signOut();
+    if (error) return toast(error.message);
+    toast("You have been logged out."); await loadEvents(); 
+  };
   window.openOrganizer = () => {
     openModal("orgModal");
     if (!sb) toast("Account service is not available right now.");
