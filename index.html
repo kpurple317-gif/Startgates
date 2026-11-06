@@ -143,26 +143,35 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (!document.querySelector(".modal.open")) document.body.style.overflow = "";
   };
   window.openAccount = () => openModal("accountModal");
-  window.openApply = () => { openModal("applyModal"); };
+  window.openApply = () => openModal("applyModal");
+  window.openOrganizer = async () => {
+    if (!sb) return toast("Account service is unavailable.");
+    const { data } = await sb.auth.getUser();
+    if (!data.user) { openModal("accountModal"); return toast("Log in first."); }
+    const { data: profile } = await sb.from("profiles").select("role").eq("id",data.user.id).maybeSingle();
+    if (!profile || !["organizer","admin"].includes(profile.role)) {
+      openModal("applyModal"); return toast("Apply to host first. Organiser access requires approval.");
+    }
+    openModal("orgModal");
+  };
   window.applyOrganizer = async function () {
+    if (!sb) return toast("Account service is unavailable.");
     const business = $("applyBusiness")?.value.trim() || "";
     const reason = $("applyReason")?.value.trim() || "";
-    const { data: auth } = await sb.auth.getUser();
-    if (!auth.user) { closeModal("applyModal"); openModal("accountModal"); return toast("Create an account or log in first."); }
     if (!business) return $("applyMessage").textContent = "Enter your name or business name.";
+    const { data: auth, error: authError } = await sb.auth.getUser();
+    if (authError || !auth.user) { closeModal("applyModal"); openModal("accountModal"); return toast("Create an account or log in first."); }
     const { error } = await sb.from("organizer_applications").insert({user_id:auth.user.id,business_name:business,reason});
-    $("applyMessage").textContent = error ? (error.code==="23505" ? "You already have an application on file." : error.message) : "Application submitted. The StarGates team must review it before you can publish events.";
+    $("applyMessage").textContent = error ? (error.code==="23505" ? "You already have an application on file." : error.message) : "Application submitted. You'll receive organiser access after review.";
   };
   window.signOut = async function () {
+    if (!sb) return;
     const { error } = await sb.auth.signOut();
     if (error) return toast(error.message);
-    toast("You have been logged out."); await loadEvents(); 
-  };
-  window.openOrganizer = () => {
-    openModal("orgModal");
-    if (!sb) toast("Account service is not available right now.");
+    toast("You have been logged out."); await loadDashboard();
   };
   window.signUp = async function () {
+    if (!sb) return toast("Account service is unavailable.");
     const email = $("authEmail")?.value.trim() || "";
     const password = $("authPassword")?.value || "";
     const fullName = $("authName")?.value.trim() || "";
@@ -171,6 +180,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     $("authMessage").textContent = error ? error.message : "Account created. Check your email to confirm your address before logging in.";
   };
   window.signIn = async function () {
+    if (!sb) return toast("Account service is unavailable.");
     const email = $("authEmail")?.value.trim() || "";
     const password = $("authPassword")?.value || "";
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
@@ -179,31 +189,46 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   };
   async function loadEvents() {
     if (!sb) return;
-    const { data, error } = await sb.from("events").select("id,title,description,location,event_date,status,ticket_types(name,price,quantity)").eq("status","published").order("event_date");
-    if (error) { console.error(error); return; }
     const grid = $("eventGrid");
-    if (!grid || !data?.length) return;
+    if (!grid) return;
+    const { data, error } = await sb.from("events")
+      .select("id,title,description,location,event_date,status,ticket_types(name,price,quantity)")
+      .eq("status","published").order("event_date");
+    if (error) { console.error("StarGates events:",error); grid.innerHTML = "<p class='note'>Events are temporarily unavailable. Please try again later.</p>"; return; }
+    if (!data?.length) { grid.innerHTML = "<p class='note'>No events have been published yet. Check back soon.</p>"; return; }
+    const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
     grid.innerHTML = data.map(ev => {
       const ticket = ev.ticket_types?.[0];
       const price = Number(ticket?.price || 0);
       const date = ev.event_date ? new Date(ev.event_date).toLocaleString() : "Date TBA";
-      const safeTitle = String(ev.title).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-      return '<article class="card" data-cat="other"><div class="poster"><div class="mark">ST★R</div></div><div class="body"><h3>'+safeTitle+'</h3><div class="meta">📅 '+date+'<br>📍 '+(ev.location || "Venue TBA")+'</div><div class="price">From KSh '+price.toLocaleString("en-KE")+'</div><button class="primary" disabled>Ticket checkout coming soon</button></div></article>';
+      const cat = /music/i.test(ev.title+" "+ev.description) ? "music" : /party|rave/i.test(ev.title+" "+ev.description) ? "party" : /sport|match/i.test(ev.title+" "+ev.description) ? "sports" : "other";
+      return '<article class="card" data-cat="'+cat+'"><div class="poster"><div class="mark">ST★R</div></div><div class="body"><h3>'+escapeHtml(ev.title)+'</h3><div class="meta">📅 '+escapeHtml(date)+'<br>📍 '+escapeHtml(ev.location || "Venue TBA")+'</div><p>'+escapeHtml(ev.description || "")+'</p><div class="price">From KSh '+price.toLocaleString("en-KE")+'</div><button class="primary" disabled>Tickets opening soon</button></div></article>';
     }).join("");
   }
   async function loadDashboard() {
     if (!sb) return;
-    const { data: userData } = await sb.auth.getUser();
-    if (!userData.user) return;
-    const { data: events } = await sb.from("events").select("id,status").eq("organizer_id", userData.user.id);
+    const { data: auth } = await sb.auth.getUser();
+    const panel = $("eventsDash");
+    if (!auth.user) {
+      if ($("activeEvents")) $("activeEvents").textContent = "0";
+      if (panel) panel.innerHTML = "<h3>My Events</h3><p class='note'>Log in to see your organiser dashboard.</p>";
+      return;
+    }
+    const { data: events, error } = await sb.from("events")
+      .select("id,title,status,event_date,location,ticket_types(name,price,quantity)")
+      .eq("organizer_id",auth.user.id).order("created_at",{ascending:false});
+    if (error) { if(panel) panel.innerHTML = "<h3>My Events</h3><p class='note'>Could not load your events.</p>"; return; }
     if ($("activeEvents")) $("activeEvents").textContent = String(events?.filter(e=>e.status==="published").length || 0);
+    if (panel) panel.innerHTML = "<h3>My Events</h3>" + ((events && events.length) ? events.map(e=>"<div class='ticket'><div><b>"+String(e.title).replace(/[&<>"]/g,"")+"</b><small>"+e.status.toUpperCase()+" · "+(e.event_date?new Date(e.event_date).toLocaleDateString():"Date TBA")+"</small></div></div>").join("") : "<p class='note'>No events submitted yet. Apply to host and submit your first event.</p>") + "<button class='secondary' onclick='signOut()'>LOG OUT</button>";
+    const { data: application } = await sb.from("organizer_applications").select("status").eq("user_id",auth.user.id).maybeSingle();
+    if ($("applyMessage") && application) $("applyMessage").textContent = "Application status: "+application.status;
   }
   if (sb) {
-    sb.auth.onAuthStateChange((_event, session) => {
-      if (session) { loadEvents(); loadDashboard(); }
-    });
+    sb.auth.onAuthStateChange(() => { setTimeout(() => { loadEvents(); loadDashboard(); },0); });
     loadEvents();
+    loadDashboard();
   }
+
   window.openVerify = function () {
     openModal("verifyModal");
     if ($("verifyResult")) $("verifyResult").textContent =
