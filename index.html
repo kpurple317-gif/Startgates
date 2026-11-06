@@ -178,8 +178,29 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const password = $("authPassword")?.value || "";
     const fullName = $("authName")?.value.trim() || "";
     if (!email || password.length < 8 || !fullName) return $("authMessage").textContent = "Enter your name, email and a password of at least 8 characters.";
-    const { error } = await sb.auth.signUp({ email, password, options: { data: { full_name: fullName }, emailRedirectTo: "https://stargates.vercel.app" } });
-    $("authMessage").textContent = error ? error.message : "Account created. Check your email to confirm your address before logging in.";
+    $("authMessage").textContent = "Creating your StarGates account...";
+    const { data, error } = await sb.auth.signUp({
+      email,
+      password,
+      options: { data: { full_name: fullName }, emailRedirectTo: "https://stargates.vercel.app" }
+    });
+    if (error) {
+      $("authMessage").textContent = error.message;
+      return;
+    }
+    if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+      $("authMessage").textContent = "This email may already have a StarGates account. Try LOG IN, or use FORGOT PASSWORD if you don't know the password.";
+      return;
+    }
+    if (data.session) {
+      $("authMessage").textContent = "Your account is ready. You're signed in.";
+      closeModal("accountModal");
+      toast("Welcome to StarGates.");
+      await loadEvents();
+      await loadDashboard();
+      return;
+    }
+    $("authMessage").textContent = "Account created. Check your email and confirm your address. Then return here and log in with the same email and password you just used.";
   };
   window.signIn = async function () {
     if (!sb) return toast("Account service is unavailable.");
