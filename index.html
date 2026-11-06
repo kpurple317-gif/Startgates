@@ -24,11 +24,12 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 .toast{position:fixed;z-index:100;left:50%;bottom:20px;transform:translate(-50%,100px);background:#fff;color:#000;padding:12px 17px;border-radius:999px;font-weight:900;transition:.3s;max-width:90%;text-align:center}.toast.show{transform:translate(-50%,0)}
 @media(max-width:800px){.nav a{display:none}.dash-grid{grid-template-columns:repeat(2,1fr)}.steps{grid-template-columns:repeat(2,1fr)}.cta{display:block}section{padding:60px 5vw}}@media(max-width:520px){.hero h1{letter-spacing:-5px}.count{grid-template-columns:repeat(2,1fr)}.steps{grid-template-columns:1fr}.cta{padding:30px}}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <header>
   <a class="brand" href="#">✦ STAR<i>GATES</i></a>
-  <nav class="nav"><a href="#events">Explore</a><a href="#dashboard">Dashboard</a><a href="#how">How it works</a><button onclick="openOrganizer()">HOST AN EVENT</button></nav>
+  <nav class="nav"><a href="#events">Explore</a><a href="#dashboard">Dashboard</a><a href="#how">How it works</a><button onclick="openAccount()">ACCOUNT</button><button onclick="openOrganizer()">HOST AN EVENT</button></nav>
 </header>
 
 <section class="hero">
@@ -103,12 +104,20 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   <div class="form"><input id="verifyCode" placeholder="Enter ticket ID"><button class="primary" onclick="verifyTicket()">VERIFY</button></div><p id="verifyResult" class="note">Production version will check the ticket against the database and mark it as used.</p>
 </div></div>
 
+
+<div class="modal" id="accountModal" onclick="if(event.target===this)closeModal('accountModal')"><div class="sheet">
+<div class="sheet-head"><div><div class="kicker">STARGATES ACCOUNT</div><h3>WELCOME.</h3></div><button class="close" onclick="closeModal('accountModal')">×</button></div>
+<div class="form"><label>Email<input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></label><label>Password<input id="authPassword" type="password" autocomplete="current-password" placeholder="At least 8 characters"></label><label>Full name<input id="authName" autocomplete="name" placeholder="Your name"></label><button class="primary" onclick="signIn()">LOG IN</button><button class="secondary" onclick="signUp()">CREATE ACCOUNT</button><p class="note" id="authMessage">Create an account or log in. Check your email if confirmation is required.</p></div>
+</div></div>
 <div class="toast" id="toast"></div>
 
 <script>
 (function () {
   "use strict";
   const $ = (id) => document.getElementById(id);
+  const SUPABASE_URL = "https://ttnorwwxauyietkhvsqg.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_Ek4yKvpVaoPuxw9AEl7BLA_na5weYfw";
+  const sb = window.supabase?.createClient(SUPABASE_URL, SUPABASE_KEY);
   const state = { eventName: "", earlyPrice: 0, regularPrice: 0, earlyQty: 0, regularQty: 0 };
   let toastTimer;
 
@@ -133,7 +142,53 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     el.classList.remove("open");
     if (!document.querySelector(".modal.open")) document.body.style.overflow = "";
   };
-  window.openOrganizer = () => openModal("orgModal");
+  window.openAccount = () => openModal("accountModal");
+  window.openOrganizer = () => {
+    openModal("orgModal");
+    if (!sb) toast("Account service is not available right now.");
+  };
+  window.signUp = async function () {
+    const email = $("authEmail")?.value.trim() || "";
+    const password = $("authPassword")?.value || "";
+    const fullName = $("authName")?.value.trim() || "";
+    if (!email || password.length < 8 || !fullName) return $("authMessage").textContent = "Enter your name, email and a password of at least 8 characters.";
+    const { error } = await sb.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
+    $("authMessage").textContent = error ? error.message : "Account created. Check your email to confirm your address before logging in.";
+  };
+  window.signIn = async function () {
+    const email = $("authEmail")?.value.trim() || "";
+    const password = $("authPassword")?.value || "";
+    const { data, error } = await sb.auth.signInWithPassword({ email, password });
+    $("authMessage").textContent = error ? error.message : "You're logged in as " + data.user.email;
+    if (!error) { closeModal("accountModal"); toast("Welcome back to StarGates."); await loadEvents(); await loadDashboard(); }
+  };
+  async function loadEvents() {
+    if (!sb) return;
+    const { data, error } = await sb.from("events").select("id,title,description,location,event_date,status,ticket_types(name,price,quantity)").eq("status","published").order("event_date");
+    if (error) { console.error(error); return; }
+    const grid = $("eventGrid");
+    if (!grid || !data?.length) return;
+    grid.innerHTML = data.map(ev => {
+      const ticket = ev.ticket_types?.[0];
+      const price = Number(ticket?.price || 0);
+      const date = ev.event_date ? new Date(ev.event_date).toLocaleString() : "Date TBA";
+      const safeTitle = String(ev.title).replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+      return '<article class="card" data-cat="other"><div class="poster"><div class="mark">ST★R</div></div><div class="body"><h3>'+safeTitle+'</h3><div class="meta">📅 '+date+'<br>📍 '+(ev.location || "Venue TBA")+'</div><div class="price">From KSh '+price.toLocaleString("en-KE")+'</div><button class="primary" disabled>Ticket checkout coming soon</button></div></article>';
+    }).join("");
+  }
+  async function loadDashboard() {
+    if (!sb) return;
+    const { data: userData } = await sb.auth.getUser();
+    if (!userData.user) return;
+    const { data: events } = await sb.from("events").select("id,status").eq("organizer_id", userData.user.id);
+    if ($("activeEvents")) $("activeEvents").textContent = String(events?.filter(e=>e.status==="published").length || 0);
+  }
+  if (sb) {
+    sb.auth.onAuthStateChange((_event, session) => {
+      if (session) { loadEvents(); loadDashboard(); }
+    });
+    loadEvents();
+  }
   window.openVerify = function () {
     openModal("verifyModal");
     if ($("verifyResult")) $("verifyResult").textContent =
@@ -195,7 +250,26 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
         !Number.isInteger(quantity) || quantity < 1 ||
         !Number.isFinite(commission) || commission < 0 || commission > 100)
       return toast("Complete the event details and enter valid ticket and commission amounts.");
-    toast("Event publishing is not connected yet. Nothing has been published or saved.");
+    (async () => {
+      if (!sb) return toast("Database connection unavailable.");
+      const { data: userData } = await sb.auth.getUser();
+      if (!userData.user) { closeModal("orgModal"); openModal("accountModal"); return toast("Log in first, then submit your event."); }
+      const category = $("orgCat")?.value || "Other";
+      const { data: event, error } = await sb.from("events").insert({
+        organizer_id: userData.user.id, title: name, description: $("orgDesc")?.value.trim() || "",
+        location: venue, event_date: new Date(date + "T20:00:00").toISOString(),
+        trailer_url: $("orgTrailer")?.value.trim() || null, status: "draft",
+        commission_percent: commission
+      }).select("id").single();
+      if (error) return toast(error.message.includes("row-level security") ? "Your account needs organizer approval before creating events." : error.message);
+      const { error: ticketError } = await sb.from("ticket_types").insert({
+        event_id: event.id, name: $("orgTicket")?.value.trim() || "General Admission",
+        price, quantity
+      });
+      if (ticketError) return toast("Event saved as draft, but ticket setup failed: " + ticketError.message);
+      closeModal("orgModal"); toast("Event saved as a draft. It is not public until approved and published.");
+      await loadDashboard();
+    })();
   };
 
   window.verifyTicket = function () {
