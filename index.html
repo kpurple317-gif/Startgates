@@ -66,10 +66,11 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   <div class="head"><div><div class="kicker">PLATFORM OWNER</div><h2>CONTROL ROOM.</h2></div><p>See what is happening across the marketplace: events, buyers, sales and your commission.</p></div>
   <div class="dash-grid"><div class="stat"><b id="activeEvents">0</b><span>Active events</span></div><div class="stat"><b id="ticketsSold">0</b><span>Tickets sold</span></div><div class="stat"><b>0</b><span>Customers</span></div><div class="stat"><b id="commission">KSh 0</b><span>Commission earned</span></div></div>
   <div class="dash-panel">
-    <div class="tabs"><button class="tab active" onclick="showDash('sales',this)">Sales</button><button class="tab" onclick="showDash('eventsDash',this)">My Events</button><button class="tab" onclick="showDash('payouts',this)">Payouts</button><button class="tab" onclick="openVerify()">VERIFY TICKET</button></div>
+    <div class="tabs"><button class="tab active" onclick="showDash('sales',this)">Sales</button><button class="tab" onclick="showDash('eventsDash',this)">My Events</button><button class="tab" onclick="showDash('payouts',this)">Payouts</button><button class="tab" id="adminReviewTab" style="display:none" onclick="showDash('adminReview',this)">EVENT REVIEW</button><button class="tab" onclick="openVerify()">VERIFY TICKET</button></div>
     <div id="sales"><h3>Recent event sales</h3><table class="table"><thead><tr><th>Event</th><th>Organizer</th><th>Tickets</th><th>Gross</th><th>Commission</th></tr></thead><tbody><tr><td colspan="5">No verified sales yet. Sales will appear after real payments are connected.</td></tr></tbody></table></div>
     <div id="eventsDash" style="display:none"><h3>Events you manage</h3><p class="note">No organizer events are connected yet.</p></div>
     <div id="payouts" style="display:none"><h3>Payouts</h3><p class="note">Payouts will appear after real payments and settlement are connected.</p></div>
+    <div id="adminReview" style="display:none"><h3>Event submissions</h3><div id="adminReviewList"><p class="note">Admin access required.</p></div></div>
   </div>
 </section>
 
@@ -244,6 +245,11 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       if (panel) panel.innerHTML = "<h3>My Events</h3><p class='note'>Log in to see your organiser dashboard.</p>";
       return;
     }
+    const { data: profile } = await sb.from("profiles").select("role").eq("id",auth.user.id).maybeSingle();
+    const isAdmin = profile?.role === "admin";
+    const adminTab = $("adminReviewTab");
+    if (adminTab) adminTab.style.display = isAdmin ? "inline-flex" : "none";
+    if (isAdmin) await loadAdminEventReviews();
     const { data: events, error } = await sb.from("events")
       .select("id,title,status,event_date,location,ticket_types(name,price,quantity)")
       .eq("organizer_id",auth.user.id).order("created_at",{ascending:false});
@@ -353,6 +359,30 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     })();
   };
 
+  async function loadAdminEventReviews() {
+    const list = $("adminReviewList");
+    if (!list || !sb) return;
+    const { data, error } = await sb.from("events")
+      .select("id,title,description,location,event_date,created_at")
+      .eq("status","draft").order("created_at",{ascending:false});
+    if (error) { list.innerHTML = "<p class='note'>Could not load event submissions.</p>"; return; }
+    if (!data?.length) { list.innerHTML = "<p class='note'>No event submissions are waiting for review.</p>"; return; }
+    const safe = value => String(value ?? "").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+    list.innerHTML = data.map(ev => "<div class='ticket' style='display:block;margin:12px 0'><b>"+safe(ev.title)+"</b><small style='display:block'>"+safe(ev.location)+" · "+(ev.event_date?new Date(ev.event_date).toLocaleString():"Date TBA")+"</small><p>"+safe(ev.description)+"</p><button class='primary' onclick='approveEvent("+JSON.stringify(ev.id)+")'>APPROVE & PUBLISH</button></div>").join("");
+  }
+
+  window.approveEvent = async function (eventId) {
+    if (!sb || !eventId) return;
+    const { data: auth } = await sb.auth.getUser();
+    if (!auth.user) return toast("Log in as the platform admin first.");
+    const { data: profile } = await sb.from("profiles").select("role").eq("id",auth.user.id).maybeSingle();
+    if (profile?.role !== "admin") return toast("Only the platform admin can publish events.");
+    const { error } = await sb.from("events").update({status:"published"}).eq("id",eventId).eq("status","draft");
+    if (error) return toast("Could not publish event: "+error.message);
+    toast("Event approved and published.");
+    await loadAdminEventReviews(); await loadEvents(); await loadDashboard();
+  };
+
   window.verifyTicket = function () {
     const code = $("verifyCode")?.value.trim() || "";
     if (!code) {
@@ -364,7 +394,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   };
 
   window.showDash = function (panelId, button) {
-    ["sales", "eventsDash", "payouts"].forEach((id) => {
+    ["sales", "eventsDash", "payouts", "adminReview"].forEach((id) => {
       const panel = $(id);
       if (panel) panel.style.display = id === panelId ? "block" : "none";
     });
