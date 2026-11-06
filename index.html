@@ -176,7 +176,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const password = $("authPassword")?.value || "";
     const fullName = $("authName")?.value.trim() || "";
     if (!email || password.length < 8 || !fullName) return $("authMessage").textContent = "Enter your name, email and a password of at least 8 characters.";
-    const { error } = await sb.auth.signUp({ email, password, options: { data: { full_name: fullName } } });
+    const { error } = await sb.auth.signUp({ email, password, options: { data: { full_name: fullName }, emailRedirectTo: "https://stargates.vercel.app" } });
     $("authMessage").textContent = error ? error.message : "Account created. Check your email to confirm your address before logging in.";
   };
   window.signIn = async function () {
