@@ -107,8 +107,9 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 
 <div class="modal" id="accountModal" onclick="if(event.target===this)closeModal('accountModal')"><div class="sheet">
 <div class="sheet-head"><div><div class="kicker">STARGATES ACCOUNT</div><h3>WELCOME.</h3></div><button class="close" onclick="closeModal('accountModal')">×</button></div>
-<div class="form"><label>Email<input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></label><label>Password<input id="authPassword" type="password" autocomplete="current-password" placeholder="At least 8 characters"></label><label>Full name<input id="authName" autocomplete="name" placeholder="Your name"></label><button class="primary" onclick="signIn()">LOG IN</button><button class="secondary" onclick="signUp()">CREATE ACCOUNT</button><p class="note" id="authMessage">Create an account or log in. Check your email if confirmation is required.</p></div>
+<div class="form"><label>Email<input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></label><label>Password<input id="authPassword" type="password" autocomplete="current-password" placeholder="At least 8 characters"></label><label>Full name<input id="authName" autocomplete="name" placeholder="Your name"></label><button class="primary" onclick="signIn()">LOG IN</button><button class="secondary" onclick="signUp()">CREATE ACCOUNT</button><button class="secondary" type="button" onclick="sendPasswordReset()">FORGOT PASSWORD?</button><p class="note" id="authMessage">Create an account or log in. Check your email if confirmation is required.</p></div>
 </div></div>
+<div class="modal" id="passwordResetModal" onclick="if(event.target===this)closeModal('passwordResetModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">ACCOUNT SECURITY</div><h3>NEW PASSWORD.</h3></div><button class="close" onclick="closeModal('passwordResetModal')">×</button></div><div class="form"><label>New password<input id="newPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label><label>Confirm new password<input id="confirmNewPassword" type="password" autocomplete="new-password" placeholder="Enter it again"></label><button class="primary" onclick="saveNewPassword()">SAVE NEW PASSWORD</button><p id="passwordResetMessage" class="note">Choose a new password for your StarGates account.</p></div></div></div>
 <div class="modal" id="applyModal" onclick="if(event.target===this)closeModal('applyModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">JOIN THE MARKETPLACE</div><h3>APPLY TO HOST.</h3></div><button class="close" onclick="closeModal('applyModal')">×</button></div><div class="form"><label>Business / organiser name<input id="applyBusiness" placeholder="Your name or brand"></label><label>Tell us about your events<textarea id="applyReason" placeholder="What kind of events do you organise?"></textarea></label><button class="primary" onclick="applyOrganizer()">SUBMIT APPLICATION</button><p id="applyMessage" class="note">Applications are reviewed before organiser access is granted.</p></div></div></div><div class="toast" id="toast"></div>
 
 <script>
@@ -187,6 +188,35 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     $("authMessage").textContent = error ? error.message : "You're logged in as " + data.user.email;
     if (!error) { closeModal("accountModal"); toast("Welcome back to StarGates."); await loadEvents(); await loadDashboard(); }
   };
+  window.sendPasswordReset = async function () {
+    if (!sb) return toast("Account service is unavailable.");
+    const email = $("authEmail")?.value.trim() || "";
+    if (!email) return $("authMessage").textContent = "Enter your account email first.";
+    $("authMessage").textContent = "Sending a password-reset email...";
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: "https://stargates.vercel.app"
+    });
+    $("authMessage").textContent = error ? error.message : "Password-reset email sent. Open it on this device; StarGates will show a new-password form.";
+  };
+  window.saveNewPassword = async function () {
+    if (!sb) return toast("Account service is unavailable.");
+    const password = $("newPassword")?.value || "";
+    const confirmation = $("confirmNewPassword")?.value || "";
+    if (password.length < 8) return $("passwordResetMessage").textContent = "Use at least 8 characters.";
+    if (password !== confirmation) return $("passwordResetMessage").textContent = "The passwords do not match.";
+    $("passwordResetMessage").textContent = "Saving your new password...";
+    const { data, error } = await sb.auth.updateUser({ password });
+    if (error) {
+      $("passwordResetMessage").textContent = error.message;
+      return;
+    }
+    closeModal("passwordResetModal");
+    toast("Password updated. You're signed in.");
+    if (data?.user) {
+      await loadEvents();
+      await loadDashboard();
+    }
+  };
   async function loadEvents() {
     if (!sb) return;
     const grid = $("eventGrid");
@@ -224,7 +254,18 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if ($("applyMessage") && application) $("applyMessage").textContent = "Application status: "+application.status;
   }
   if (sb) {
-    sb.auth.onAuthStateChange(() => { setTimeout(() => { loadEvents(); loadDashboard(); },0); });
+    sb.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY" && session) {
+        setTimeout(() => {
+          closeModal("accountModal");
+          openModal("passwordResetModal");
+          if ($("passwordResetMessage")) $("passwordResetMessage").textContent = "Recovery link verified. Enter and confirm your new password.";
+        }, 0);
+      }
+      if (event === "SIGNED_IN") {
+        setTimeout(() => { loadEvents(); loadDashboard(); }, 0);
+      }
+    });
     loadEvents();
     loadDashboard();
   }
