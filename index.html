@@ -238,7 +238,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const password = $("newPassword")?.value || "";
     const confirmation = $("confirmNewPassword")?.value || "";
     if (!email) return $("passwordResetMessage").textContent = "Enter your account email.";
-    if (!/^\\d{6,8}$/.test(token)) return $("passwordResetMessage").textContent = "Enter the 6–8 digit code from your email.";
+    if (!/^[0-9]{6,8}$/.test(token)) return $("passwordResetMessage").textContent = "Enter the 6–8 digit code from your email.";
     if (password.length < 8) return $("passwordResetMessage").textContent = "Use at least 8 characters.";
     if (password !== confirmation) return $("passwordResetMessage").textContent = "The passwords do not match.";
     if (!recoveryVerified) {
