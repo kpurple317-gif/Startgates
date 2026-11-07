@@ -110,7 +110,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 <div class="sheet-head"><div><div class="kicker">STARGATES ACCOUNT</div><h3>WELCOME.</h3></div><button class="close" onclick="closeModal('accountModal')">×</button></div>
 <div class="form"><label>Email<input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></label><label>Password<input id="authPassword" type="password" autocomplete="current-password" placeholder="At least 8 characters"></label><label>Full name<input id="authName" autocomplete="name" placeholder="Your name"></label><button class="primary" onclick="signIn()">LOG IN</button><button class="secondary" onclick="signUp()">CREATE ACCOUNT</button><button class="secondary" type="button" onclick="sendPasswordReset()">FORGOT PASSWORD?</button><p class="note" id="authMessage">Create an account or log in. Check your email if confirmation is required.</p></div>
 </div></div>
-<div class="modal" id="passwordResetModal" onclick="if(event.target===this)closeModal('passwordResetModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">ACCOUNT SECURITY</div><h3>RESET PASSWORD.</h3></div><button class="close" onclick="closeModal('passwordResetModal')">×</button></div><div class="form"><label>Email<input id="recoveryEmail" type="email" autocomplete="email" placeholder="Your account email"></label><label>Email verification code<input id="recoveryCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="Enter the code from your email"></label><label>New password<input id="newPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label><label>Confirm new password<input id="confirmNewPassword" type="password" autocomplete="new-password" placeholder="Enter it again"></label><button class="primary" onclick="saveNewPassword()">VERIFY CODE & SAVE PASSWORD</button><p id="passwordResetMessage" class="note">Enter the code from your password-reset email, then choose a new password.</p></div></div></div>
+<div class="modal" id="passwordResetModal" onclick="if(event.target===this)closeModal('passwordResetModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">ACCOUNT SECURITY</div><h3>CHOOSE A NEW PASSWORD.</h3></div><button class="close" onclick="closeModal('passwordResetModal')">×</button></div><div class="form"><label>New password<input id="newPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label><label>Confirm new password<input id="confirmNewPassword" type="password" autocomplete="new-password" placeholder="Enter it again"></label><button class="primary" onclick="saveNewPassword()">SAVE NEW PASSWORD</button><p id="passwordResetMessage" class="note">Open the password-reset link from your email first. Then choose your new password here.</p></div></div></div>
 <div class="modal" id="applyModal" onclick="if(event.target===this)closeModal('applyModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">JOIN THE MARKETPLACE</div><h3>APPLY TO HOST.</h3></div><button class="close" onclick="closeModal('applyModal')">×</button></div><div class="form"><label>Business / organiser name<input id="applyBusiness" placeholder="Your name or brand"></label><label>Tell us about your events<textarea id="applyReason" placeholder="What kind of events do you organise?"></textarea></label><button class="primary" onclick="applyOrganizer()">SUBMIT APPLICATION</button><p id="applyMessage" class="note">Applications are reviewed before organiser access is granted.</p></div></div></div><div class="toast" id="toast"></div>
 
 <script>
@@ -215,48 +215,37 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (!sb) return toast("Account service is unavailable.");
     const email = $("authEmail")?.value.trim() || "";
     if (!email) return $("authMessage").textContent = "Enter your account email first.";
-    $("authMessage").textContent = "Sending a password-reset code...";
-    const { error } = await sb.auth.resetPasswordForEmail(email);
+  window.sendPasswordReset = async function () {
+    if (!sb) return toast("Account service is unavailable.");
+    const email = $("authEmail")?.value.trim() || "";
+    if (!email) return $("authMessage").textContent = "Enter your account email first.";
+    $("authMessage").textContent = "Sending a password-reset email...";
+    const { error } = await sb.auth.resetPasswordForEmail(email, {
+      redirectTo: "https://startgates.vercel.app"
+    });
     if (error) {
       $("authMessage").textContent = error.message;
       return;
     }
-    $("recoveryEmail").value = email;
-    $("recoveryCode").value = "";
-    $("newPassword").value = "";
-    $("confirmNewPassword").value = "";
-    recoveryVerified = false;
-    $("authMessage").textContent = "Password-reset code sent. Check your email and enter the code in the next screen.";
-    closeModal("accountModal");
-    openModal("passwordResetModal");
-    $("passwordResetMessage").textContent = "Enter the one-time code from your password-reset email.";
+    $("authMessage").textContent = "Password-reset email sent. Open the link in that email; it will bring you back here to choose a new password.";
+    toast("Check your email for the reset link.");
   };
   window.saveNewPassword = async function () {
     if (!sb) return toast("Account service is unavailable.");
-    const email = $("recoveryEmail")?.value.trim() || "";
-    const token = $("recoveryCode")?.value.trim() || "";
     const password = $("newPassword")?.value || "";
     const confirmation = $("confirmNewPassword")?.value || "";
-    if (!email) return $("passwordResetMessage").textContent = "Enter your account email.";
-    if (!/^[0-9]{6,8}$/.test(token)) return $("passwordResetMessage").textContent = "Enter the 6–8 digit code from your email.";
     if (password.length < 8) return $("passwordResetMessage").textContent = "Use at least 8 characters.";
     if (password !== confirmation) return $("passwordResetMessage").textContent = "The passwords do not match.";
-    if (!recoveryVerified) {
-      $("passwordResetMessage").textContent = "Verifying your email code...";
-      const { error: verifyError } = await sb.auth.verifyOtp({ email, token, type: "recovery" });
-      if (verifyError) {
-        $("passwordResetMessage").textContent = "Code verification failed: " + verifyError.message;
-        return;
-      }
-      recoveryVerified = true;
-    }
-    $("passwordResetMessage").textContent = "Code verified. Saving your new password...";
+    const { data: sessionData } = await sb.auth.getSession();
+    if (!sessionData?.session) return $("passwordResetMessage").textContent = "Your reset link has not been verified. Open the newest reset email link again.";
+    $("passwordResetMessage").textContent = "Saving your new password...";
     const { data, error } = await sb.auth.updateUser({ password });
     if (error) {
-      $("passwordResetMessage").textContent = "Your code was verified, but saving failed: " + error.message + ". You can try SAVE again without re-entering a new code.";
+      $("passwordResetMessage").textContent = "Could not save password: " + error.message;
       return;
     }
-    recoveryVerified = false;
+    $("newPassword").value = "";
+    $("confirmNewPassword").value = "";
     closeModal("passwordResetModal");
     toast("Password updated. You're signed in.");
     if (data?.user) {
@@ -264,13 +253,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       await loadDashboard();
     }
   };
-  async function loadEvents() {
-    if (!sb) return;
-    const grid = $("eventGrid");
-    if (!grid) return;
-    const { data, error } = await sb.from("events")
-      .select("id,title,description,location,event_date,status,ticket_types(name,price,quantity)")
-      .eq("status","published").order("event_date");
+hed").order("event_date");
     if (error) { console.error("StarGates events:",error); grid.innerHTML = "<p class='note'>Events are temporarily unavailable. Please try again later.</p>"; return; }
     if (!data?.length) { grid.innerHTML = "<p class='note'>No events have been published yet. Check back soon.</p>"; return; }
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
@@ -307,6 +290,12 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   }
   if (sb) {
     sb.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        setTimeout(() => {
+          $("passwordResetMessage").textContent = "Your reset link is verified. Choose a new password below.";
+          openModal("passwordResetModal");
+        }, 0);
+      }
       if (event === "SIGNED_IN") {
         setTimeout(() => { loadEvents(); loadDashboard(); }, 0);
       }
