@@ -439,7 +439,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (error) { list.innerHTML = "<p class='note'>Could not load event submissions.</p>"; return; }
     if (!data?.length) { list.innerHTML = "<p class='note'>No event submissions are waiting for review.</p>"; return; }
     const safe = value => String(value ?? "").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-    list.innerHTML = data.map(ev => "<div class='ticket' style='display:block;margin:12px 0'><b>"+safe(ev.title)+"</b><small style='display:block'>"+safe(ev.location)+" · "+(ev.event_date?new Date(ev.event_date).toLocaleString():"Date TBA")+"</small><p>"+safe(ev.description)+"</p><button class='primary' onclick='approveEvent("+JSON.stringify(ev.id)+")'>APPROVE & PUBLISH</button></div>").join("");
+    list.innerHTML = data.map(ev => "<div class='ticket' style='display:block;margin:12px 0'><b>"+safe(ev.title)+"</b><small style='display:block'>"+safe(ev.location)+" · "+(ev.event_date?new Date(ev.event_date).toLocaleString():"Date TBA")+"</small><p>"+safe(ev.description)+"</p><div style='display:flex;gap:8px;flex-wrap:wrap'><button class='primary' onclick='approveEvent("+JSON.stringify(ev.id)+")'>APPROVE & PUBLISH</button><button class='secondary' onclick='rejectEvent("+JSON.stringify(ev.id)+")'>REJECT EVENT</button></div></div>").join("");
   }
 
 
@@ -481,11 +481,17 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (!auth.user) return toast("Log in as a platform admin first.");
     const { data: profile } = await sb.from("profiles").select("role").eq("id",auth.user.id).maybeSingle();
     if (profile?.role !== "admin") return toast("Only platform admins can review applications.");
-    const { error } = await sb.from("organizer_applications").update({status:decision}).eq("id",applicationId).eq("status","pending");
+    const { data: reviewed, error } = await sb.from("organizer_applications").update({status:decision})
+      .eq("id",applicationId).eq("status","pending").select("id,status").maybeSingle();
     if (error) return toast("Could not update application: " + error.message);
-    toast(decision === "approved" ? "Application approved. Organiser access granted." : "Application rejected.");
+    if (!reviewed) return toast("This application was already reviewed or could not be found.");
+    const { error: mailError } = await sb.functions.invoke("notify-organizer-decision", {
+      body: { kind: "application", id: applicationId }
+    });
     await loadAdminApplications();
     await loadDashboard();
+    if (mailError) return toast("Decision saved, but email was not sent. Check the email setup.");
+    toast(decision === "approved" ? "Application approved. Organiser notification email sent." : "Application rejected. Notification email sent.");
   };
 
   window.approveEvent = async function (eventId) {
@@ -506,10 +512,35 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       await loadAdminEventReviews();
       return toast("Nothing was published. This event may already be reviewed or no longer exist. Refresh and check the event status.");
     }
+    const { error: mailError } = await sb.functions.invoke("notify-organizer-decision", {
+      body: { kind: "event", id: eventId }
+    });
     await loadAdminEventReviews();
     await loadEvents();
     await loadDashboard();
-    toast("Event approved and published. It should now appear in Explore Events.");
+    if (mailError) return toast("Event published, but the organiser email was not sent. Check the email setup.");
+    toast("Event approved and published. Organiser notification email sent.");
+  };
+
+  window.rejectEvent = async function (eventId) {
+    if (!sb || !eventId) return;
+    const { data: auth } = await sb.auth.getUser();
+    if (!auth.user) return toast("Log in as a platform admin first.");
+    const { data: profile } = await sb.from("profiles").select("role").eq("id",auth.user.id).maybeSingle();
+    if (profile?.role !== "admin") return toast("Only platform admins can reject events.");
+    if (!confirm("Reject this event submission? The organiser will be notified by email.")) return;
+    const { data: rejected, error } = await sb.from("events").update({status:"rejected"})
+      .eq("id",eventId).eq("status","draft").select("id,status").maybeSingle();
+    if (error) return toast("Could not reject event: " + error.message);
+    if (!rejected) return toast("This event was already reviewed or could not be found.");
+    const { error: mailError } = await sb.functions.invoke("notify-organizer-decision", {
+      body: { kind: "event", id: eventId }
+    });
+    await loadAdminEventReviews();
+    await loadEvents();
+    await loadDashboard();
+    if (mailError) return toast("Event rejected, but the organiser email was not sent. Check the email setup.");
+    toast("Event rejected. Organiser notification email sent.");
   };
 
   window.verifyTicket = function () {
