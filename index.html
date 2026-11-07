@@ -431,7 +431,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     list.innerHTML = data.map(app => {
       const pending = app.status === "pending";
       const actions = pending
-        ? "<div style='display:flex;gap:8px;flex-wrap:wrap'><button class='primary' onclick='reviewOrganizerApplication(" + JSON.stringify(app.id) + ",\"approved\")'>APPROVE</button><button class='secondary' onclick='reviewOrganizerApplication(" + JSON.stringify(app.id) + ",\"rejected\")'>REJECT</button></div>"
+        ? "<div style='display:flex;gap:8px;flex-wrap:wrap'><button class='primary' onclick='reviewOrganizerApplication(" + JSON.stringify(app.id) + ",&#39;approved&#39;)'>APPROVE</button><button class='secondary' onclick='reviewOrganizerApplication(" + JSON.stringify(app.id) + ",&#39;rejected&#39;)'>REJECT</button></div>"
         : "<small>Reviewed application — no action needed.</small>";
       return "<div class='ticket' style='display:block;margin:12px 0'><b>" + safe(app.business_name) + "</b><small style='display:block'>Applicant: " + safe(app.profiles?.display_name || "StarGates user") + " · " + safe(app.status.toUpperCase()) + " · " + safe(new Date(app.created_at).toLocaleString()) + "</small><p>" + safe(app.reason || "No reason provided.") + "</p>" + actions + "</div>";
     }).join("");
