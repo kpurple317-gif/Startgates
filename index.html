@@ -29,7 +29,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 <body>
 <header>
   <a class="brand" href="#">✦ STAR<i>GATES</i></a>
-  <nav class="nav"><a href="#events">Explore</a><a href="#dashboard">Dashboard</a><a href="#how">How it works</a><button onclick="openAccount()">ACCOUNT</button><button onclick="openApply()">APPLY TO HOST</button></nav>
+  <nav class="nav"><a href="#events">Explore</a><a href="#dashboard">Dashboard</a><a href="#how">How it works</a><button onclick="openAccount()">ACCOUNT</button><button onclick="openOrganizer()">HOST AN EVENT</button></nav>
 </header>
 
 <section class="hero">
@@ -37,7 +37,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     <div class="kicker">THE EVENT MARKETPLACE</div>
     <h1>STAR <span>GATES.</span></h1>
     <p>Discover events. Sell out your event. One place for the people who create the night and the people who live it.</p>
-    <div class="actions"><a class="primary" href="#events">EXPLORE EVENTS</a><button class="secondary" onclick="openApply()">HOST AN EVENT</button></div>
+    <div class="actions"><a class="primary" href="#events">EXPLORE EVENTS</a><button class="secondary" onclick="openOrganizer()">HOST AN EVENT</button></div>
   </div>
 </section>
 
@@ -81,7 +81,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   <div class="steps"><div class="step"><b>01 — Discover</b><span>Find an event, check the details and watch the trailer.</span></div><div class="step"><b>02 — Choose</b><span>Pick your ticket type and quantity, then enter your details.</span></div><div class="step"><b>03 — Get your ticket</b><span>After payment, your unique ticket can be sent straight to your email.</span></div><div class="step"><b>04 — Scan</b><span>Show the QR ticket at the entrance. Staff verify it before entry.</span></div></div>
 </section>
 
-<section><div class="cta"><div><div class="kicker">FOR ORGANIZERS</div><h2>SELL YOUR<br>EVENT.</h2><p>Create your event, choose your own ticket prices and quantities, publish it and watch your sales grow.</p></div><button onclick="openApply()">BECOME AN ORGANIZER →</button></div></section>
+<section><div class="cta"><div><div class="kicker">FOR ORGANIZERS</div><h2>SELL YOUR<br>EVENT.</h2><p>Create your event, choose your own ticket prices and quantities, publish it and watch your sales grow.</p></div><button onclick="openOrganizer()">CREATE / MANAGE EVENTS →</button></div></section>
 
 <footer><span>© 2026 STARGATES</span><span>EVENTS • TICKETS • COMMUNITY</span></footer>
 
@@ -311,7 +311,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       .eq("organizer_id",auth.user.id).order("created_at",{ascending:false});
     if (error) { if(panel) panel.innerHTML = "<h3>My Events</h3><p class='note'>Could not load your events.</p>"; return; }
     if ($("activeEvents")) $("activeEvents").textContent = String(events?.filter(e=>e.status==="published").length || 0);
-    if (panel) panel.innerHTML = "<h3>My Events</h3>" + ((events && events.length) ? events.map(e=>"<div class='ticket'><div><b>"+String(e.title).replace(/[&<>"]/g,"")+"</b><small>"+e.status.toUpperCase()+" · "+(e.event_date?new Date(e.event_date).toLocaleDateString():"Date TBA")+"</small></div></div>").join("") : "<p class='note'>No events submitted yet. Apply to host and submit your first event.</p>") + "<button class='secondary' onclick='signOut()'>LOG OUT</button>";
+    if (panel) panel.innerHTML = "<h3>My Events</h3>" + (["organizer","admin"].includes(profile?.role) ? "<button class='primary' style='margin:10px 0 16px' onclick='openOrganizer()'>+ CREATE ANOTHER EVENT</button>" : "") + ((events && events.length) ? events.map(e=>"<div class='ticket'><div><b>"+String(e.title).replace(/[&<>"]/g,"")+"</b><small>"+e.status.toUpperCase()+" · "+(e.event_date?new Date(e.event_date).toLocaleDateString():"Date TBA")+"</small></div></div>").join("") : "<p class='note'>No events submitted yet. Apply to host and submit your first event.</p>") + "<button class='secondary' onclick='signOut()'>LOG OUT</button>";
     const { data: application } = await sb.from("organizer_applications").select("status").eq("user_id",auth.user.id).maybeSingle();
     if ($("applyMessage") && application) $("applyMessage").textContent = "Application status: "+application.status;
   }
