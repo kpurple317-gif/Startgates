@@ -99,7 +99,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 </div></div>
 
 <div class="modal" id="orgModal" onclick="if(event.target===this)closeModal('orgModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">ORGANIZER</div><h3>CREATE EVENT.</h3></div><button class="close" onclick="closeModal('orgModal')">×</button></div>
-  <div class="form"><label>Event name<input id="orgName" placeholder="e.g. Summer Festival"></label><label>Category<select id="orgCat"><option>Music</option><option>Parties</option><option>Sports</option><option>Other</option></select></label><label>Date<input id="orgDate" type="date"></label><label>Venue<input id="orgVenue" placeholder="Venue / location"></label><label>Description<textarea id="orgDesc" placeholder="Tell people what makes your event worth attending."></textarea></label><label>Trailer video URL<input id="orgTrailer" placeholder="https://..."></label><label>Ticket name<input id="orgTicket" placeholder="Early Bird"></label><label>Ticket price (KSh)<input id="orgPrice" type="number" min="0" placeholder="500"></label><label>Ticket quantity<input id="orgQty" type="number" min="1" placeholder="100"></label><label>Your platform commission %<input id="orgCommission" type="number" min="0" max="100" placeholder="5"></label><button class="primary" onclick="publishEvent()">PUBLISH EVENT</button></div>
+  <div class="form"><label>Event name<input id="orgName" placeholder="e.g. Summer Festival"></label><label>Category<select id="orgCat"><option>Music</option><option>Parties</option><option>Sports</option><option>Other</option></select></label><label>Date<input id="orgDate" type="date"></label><label>Venue<input id="orgVenue" placeholder="Venue / location"></label><label>Description<textarea id="orgDesc" placeholder="Tell people what makes your event worth attending."></textarea></label><label>Trailer video URL<input id="orgTrailer" placeholder="https://..."></label><label>Ticket types</label><div id="ticketTypeRows"><div class="ticket-type-row" style="border:1px solid #333;border-radius:14px;padding:12px;display:grid;gap:9px"><input class="ticket-type-name" placeholder="Ticket name — e.g. Early Bird" value="Early Bird"><input class="ticket-type-price" type="number" min="0" step="1" placeholder="Price in KSh — e.g. 500"><input class="ticket-type-quantity" type="number" min="1" step="1" placeholder="Quantity — e.g. 100"></div></div><button type="button" class="secondary" onclick="addTicketType()">+ ADD ANOTHER TICKET TYPE</button><label>Your platform commission %<input id="orgCommission" type="number" min="0" max="100" placeholder="5"></label><button class="primary" onclick="publishEvent()">PUBLISH EVENT</button></div>
   <div class="note">Demo organizer flow. Production version saves this event to a database and publishes it to the marketplace.</div>
 </div></div>
 
@@ -375,23 +375,38 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     toast("Payments are not connected yet. No payment was started and no money was charged.");
   };
 
+  window.addTicketType = function () {
+    const rows = $("ticketTypeRows");
+    if (!rows) return;
+    const row = document.createElement("div");
+    row.className = "ticket-type-row";
+    row.style.cssText = "border:1px solid #333;border-radius:14px;padding:12px;display:grid;gap:9px;margin-top:9px";
+    row.innerHTML = '<input class="ticket-type-name" placeholder="Ticket name — e.g. VIP"><input class="ticket-type-price" type="number" min="0" step="1" placeholder="Price in KSh"><input class="ticket-type-quantity" type="number" min="1" step="1" placeholder="Quantity"><button type="button" class="secondary" onclick="this.parentElement.remove()">REMOVE THIS TYPE</button>';
+    rows.appendChild(row);
+  };
+
   window.publishEvent = function () {
     const name = $("orgName")?.value.trim() || "";
     const date = $("orgDate")?.value || "";
     const venue = $("orgVenue")?.value.trim() || "";
-    const price = Number($("orgPrice")?.value);
-    const quantity = Number($("orgQty")?.value);
     const commission = Number($("orgCommission")?.value || 0);
-    if (!name || !date || !venue || $("orgPrice")?.value === "" ||
-        $("orgQty")?.value === "" || !Number.isFinite(price) || price < 0 ||
-        !Number.isInteger(quantity) || quantity < 1 ||
+    const ticketTypes = Array.from(document.querySelectorAll("#ticketTypeRows .ticket-type-row")).map(row => ({
+      name: row.querySelector(".ticket-type-name")?.value.trim() || "",
+      priceText: row.querySelector(".ticket-type-price")?.value ?? "",
+      quantityText: row.querySelector(".ticket-type-quantity")?.value ?? ""
+    }));
+    const validTickets = ticketTypes.length > 0 && ticketTypes.every(ticket =>
+      ticket.name && ticket.priceText !== "" && Number.isFinite(Number(ticket.priceText)) &&
+      Number(ticket.priceText) >= 0 && ticket.quantityText !== "" &&
+      Number.isInteger(Number(ticket.quantityText)) && Number(ticket.quantityText) >= 1
+    );
+    if (!name || !date || !venue || !validTickets ||
         !Number.isFinite(commission) || commission < 0 || commission > 100)
-      return toast("Complete the event details and enter valid ticket and commission amounts.");
+      return toast("Complete the event details. Each ticket needs a name, valid price and quantity.");
     (async () => {
       if (!sb) return toast("Database connection unavailable.");
-      const { data: userData } = await sb.auth.getUser();
-      if (!userData.user) { closeModal("orgModal"); openModal("accountModal"); return toast("Log in first, then submit your event."); }
-      const category = $("orgCat")?.value || "Other";
+      const { data: userData, error: authError } = await sb.auth.getUser();
+      if (authError || !userData.user) { closeModal("orgModal"); openModal("accountModal"); return toast("Log in first, then submit your event."); }
       const { data: event, error } = await sb.from("events").insert({
         organizer_id: userData.user.id, title: name, description: $("orgDesc")?.value.trim() || "",
         location: venue, event_date: new Date(date + "T20:00:00").toISOString(),
@@ -399,12 +414,13 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
         commission_percent: commission
       }).select("id").single();
       if (error) return toast(error.message.includes("row-level security") ? "Your account needs organizer approval before creating events." : error.message);
-      const { error: ticketError } = await sb.from("ticket_types").insert({
-        event_id: event.id, name: $("orgTicket")?.value.trim() || "General Admission",
-        price, quantity
-      });
-      if (ticketError) return toast("Event saved as draft, but ticket setup failed: " + ticketError.message);
-      closeModal("orgModal"); toast("Event saved as a draft. It is not public until approved and published.");
+      const rows = ticketTypes.map(ticket => ({
+        event_id: event.id, name: ticket.name, price: Number(ticket.priceText), quantity: Number(ticket.quantityText)
+      }));
+      const { error: ticketError } = await sb.from("ticket_types").insert(rows);
+      if (ticketError) return toast("Event saved as a draft, but ticket setup failed. Ask an admin to review it: " + ticketError.message);
+      closeModal("orgModal");
+      toast("Event and " + rows.length + " ticket type(s) saved as a draft. It will appear publicly after admin approval.");
       await loadDashboard();
     })();
   };
