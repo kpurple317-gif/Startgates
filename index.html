@@ -108,7 +108,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 
 <div class="modal" id="accountModal" onclick="if(event.target===this)closeModal('accountModal')"><div class="sheet">
 <div class="sheet-head"><div><div class="kicker">STARGATES ACCOUNT</div><h3>WELCOME.</h3></div><button class="close" onclick="closeModal('accountModal')">×</button></div>
-<div class="form"><label>Email<input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></label><label>Password<input id="authPassword" type="password" autocomplete="current-password" placeholder="At least 8 characters"></label><label>Full name<input id="authName" autocomplete="name" placeholder="Your name"></label><button class="primary" onclick="signIn()">LOG IN</button><button class="secondary" onclick="signUp()">CREATE ACCOUNT</button><button class="secondary" type="button" onclick="sendPasswordReset()">FORGOT PASSWORD?</button><button class="secondary" type="button" onclick="signOut()">LOG OUT</button><p class="note" id="authMessage">Create an account or log in. Check your email if confirmation is required.</p></div>
+<div class="form" id="authForm"><label>Email<input id="authEmail" type="email" autocomplete="email" placeholder="you@example.com"></label><label>Password<input id="authPassword" type="password" autocomplete="current-password" placeholder="At least 8 characters"></label><label>Full name<input id="authName" autocomplete="name" placeholder="Your name"></label><button class="primary" onclick="signIn()">LOG IN</button><button class="secondary" onclick="signUp()">CREATE ACCOUNT</button><button class="secondary" type="button" onclick="sendPasswordReset()">FORGOT PASSWORD?</button><p class="note" id="authMessage">Create an account or log in. Check your email if confirmation is required.</p></div><div class="form" id="signedInPanel" style="display:none"><p class="note" id="signedInEmail"></p><p class="note" id="signedInRole"></p><button class="secondary" type="button" onclick="signOut()">LOG OUT</button></div>
 </div></div>
 <div class="modal" id="passwordResetModal" onclick="if(event.target===this)closeModal('passwordResetModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">ACCOUNT SECURITY</div><h3>CHOOSE A NEW PASSWORD.</h3></div><button class="close" onclick="closeModal('passwordResetModal')">×</button></div><div class="form"><label>New password<input id="newPassword" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label><label>Confirm new password<input id="confirmNewPassword" type="password" autocomplete="new-password" placeholder="Enter it again"></label><button class="primary" onclick="saveNewPassword()">SAVE NEW PASSWORD</button><p id="passwordResetMessage" class="note">Open the password-reset link from your email first. Then choose your new password here.</p></div></div></div>
 <div class="modal" id="applyModal" onclick="if(event.target===this)closeModal('applyModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">JOIN THE MARKETPLACE</div><h3>APPLY TO HOST.</h3></div><button class="close" onclick="closeModal('applyModal')">×</button></div><div class="form"><label>Business / organiser name<input id="applyBusiness" placeholder="Your name or brand"></label><label>Tell us about your events<textarea id="applyReason" placeholder="What kind of events do you organise?"></textarea></label><button class="primary" onclick="applyOrganizer()">SUBMIT APPLICATION</button><p id="applyMessage" class="note">Applications are reviewed before organiser access is granted.</p></div></div></div><div class="toast" id="toast"></div>
@@ -167,10 +167,13 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     $("applyMessage").textContent = error ? (error.code==="23505" ? "You already have an application on file." : error.message) : "Application submitted. You'll receive organiser access after review.";
   };
   window.signOut = async function () {
-    if (!sb) return;
-    const { error } = await sb.auth.signOut();
-    if (error) return toast(error.message);
-    toast("You have been logged out."); await loadDashboard();
+    if (!sb) return toast("Account service is unavailable.");
+    const { error } = await sb.auth.signOut({ scope: "local" });
+    if (error) return toast("Could not log out: " + error.message);
+    closeModal("accountModal");
+    if ($("authPassword")) $("authPassword").value = "";
+    await loadDashboard();
+    toast("Logged out of this device. Log in again whenever you're ready.");
   };
   window.signUp = async function () {
     if (!sb) return toast("Account service is unavailable.");
@@ -267,18 +270,29 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       return '<article class="card" data-cat="'+cat+'"><div class="poster"><div class="mark">ST★R</div></div><div class="body"><h3>'+escapeHtml(ev.title)+'</h3><div class="meta">📅 '+escapeHtml(date)+'<br>📍 '+escapeHtml(ev.location || "Venue TBA")+'</div><p>'+escapeHtml(ev.description || "")+'</p><div class="price">From KSh '+price.toLocaleString("en-KE")+'</div><button class="primary" disabled>Tickets opening soon</button></div></article>';
     }).join("");
   }
+  function updateAccountUI(user, role) {
+    const authForm = $("authForm");
+    const signedInPanel = $("signedInPanel");
+    if (authForm) authForm.style.display = user ? "none" : "grid";
+    if (signedInPanel) signedInPanel.style.display = user ? "grid" : "none";
+    if ($("signedInEmail")) $("signedInEmail").textContent = user ? "Signed in as " + user.email : "";
+    if ($("signedInRole")) $("signedInRole").textContent = user ? "Account role: " + (role || "customer") : "";
+  }
   async function loadDashboard() {
     if (!sb) return;
     const { data: auth } = await sb.auth.getUser();
     const panel = $("eventsDash");
+    const adminTab = $("adminReviewTab");
     if (!auth.user) {
+      updateAccountUI(null, null);
+      if (adminTab) adminTab.style.display = "none";
       if ($("activeEvents")) $("activeEvents").textContent = "0";
       if (panel) panel.innerHTML = "<h3>My Events</h3><p class='note'>Log in to see your organiser dashboard.</p>";
       return;
     }
     const { data: profile } = await sb.from("profiles").select("role").eq("id",auth.user.id).maybeSingle();
     const isAdmin = profile?.role === "admin";
-    const adminTab = $("adminReviewTab");
+    updateAccountUI(auth.user, profile?.role);
     if (adminTab) adminTab.style.display = isAdmin ? "inline-flex" : "none";
     if (isAdmin) await loadAdminEventReviews();
     const { data: events, error } = await sb.from("events")
