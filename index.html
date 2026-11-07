@@ -253,7 +253,13 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       await loadDashboard();
     }
   };
-hed").order("event_date");
+  async function loadEvents() {
+    if (!sb) return;
+    const grid = $("eventGrid");
+    if (!grid) return;
+    const { data, error } = await sb.from("events")
+      .select("id,title,description,location,event_date,status,ticket_types(name,price,quantity)")
+      .eq("status","published").order("event_date");
     if (error) { console.error("StarGates events:",error); grid.innerHTML = "<p class='note'>Events are temporarily unavailable. Please try again later.</p>"; return; }
     if (!data?.length) { grid.innerHTML = "<p class='note'>No events have been published yet. Check back soon.</p>"; return; }
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
