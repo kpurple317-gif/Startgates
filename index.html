@@ -215,10 +215,6 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (!sb) return toast("Account service is unavailable.");
     const email = $("authEmail")?.value.trim() || "";
     if (!email) return $("authMessage").textContent = "Enter your account email first.";
-  window.sendPasswordReset = async function () {
-    if (!sb) return toast("Account service is unavailable.");
-    const email = $("authEmail")?.value.trim() || "";
-    if (!email) return $("authMessage").textContent = "Enter your account email first.";
     $("authMessage").textContent = "Sending a password-reset email...";
     const { error } = await sb.auth.resetPasswordForEmail(email, {
       redirectTo: "https://startgates.vercel.app"
