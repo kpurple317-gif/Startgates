@@ -469,14 +469,26 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 
   window.approveEvent = async function (eventId) {
     if (!sb || !eventId) return;
-    const { data: auth } = await sb.auth.getUser();
-    if (!auth.user) return toast("Log in as the platform admin first.");
-    const { data: profile } = await sb.from("profiles").select("role").eq("id",auth.user.id).maybeSingle();
-    if (profile?.role !== "admin") return toast("Only the platform admin can publish events.");
-    const { error } = await sb.from("events").update({status:"published"}).eq("id",eventId).eq("status","draft");
-    if (error) return toast("Could not publish event: "+error.message);
-    toast("Event approved and published.");
-    await loadAdminEventReviews(); await loadEvents(); await loadDashboard();
+    const { data: auth, error: authError } = await sb.auth.getUser();
+    if (authError || !auth.user) return toast("Log in as the platform admin first.");
+    const { data: profile, error: profileError } = await sb.from("profiles").select("role").eq("id",auth.user.id).maybeSingle();
+    if (profileError) return toast("Could not verify admin access: " + profileError.message);
+    if (profile?.role !== "admin") return toast("Only platform admins can publish events.");
+    const { data: published, error } = await sb.from("events")
+      .update({status:"published"})
+      .eq("id",eventId)
+      .eq("status","draft")
+      .select("id,status")
+      .maybeSingle();
+    if (error) return toast("Could not publish event: " + error.message);
+    if (!published) {
+      await loadAdminEventReviews();
+      return toast("Nothing was published. This event may already be reviewed or no longer exist. Refresh and check the event status.");
+    }
+    await loadAdminEventReviews();
+    await loadEvents();
+    await loadDashboard();
+    toast("Event approved and published. It should now appear in Explore Events.");
   };
 
   window.verifyTicket = function () {
