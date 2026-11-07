@@ -265,11 +265,16 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (!data?.length) { grid.innerHTML = "<p class='note'>No events have been published yet. Check back soon.</p>"; return; }
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
     grid.innerHTML = data.map(ev => {
-      const ticket = ev.ticket_types?.[0];
-      const price = Number(ticket?.price || 0);
+      const tickets = ev.ticket_types || [];
+      const prices = tickets.map(ticket => Number(ticket.price)).filter(price => Number.isFinite(price));
+      const lowestPrice = prices.length ? Math.min(...prices) : null;
       const date = ev.event_date ? new Date(ev.event_date).toLocaleString() : "Date TBA";
       const cat = /music/i.test(ev.title+" "+ev.description) ? "music" : /party|rave/i.test(ev.title+" "+ev.description) ? "party" : /sport|match/i.test(ev.title+" "+ev.description) ? "sports" : "other";
-      return '<article class="card" data-cat="'+cat+'"><div class="poster"><div class="mark">ST★R</div></div><div class="body"><h3>'+escapeHtml(ev.title)+'</h3><div class="meta">📅 '+escapeHtml(date)+'<br>📍 '+escapeHtml(ev.location || "Venue TBA")+'</div><p>'+escapeHtml(ev.description || "")+'</p><div class="price">From KSh '+price.toLocaleString("en-KE")+'</div><button class="primary" disabled>Tickets opening soon</button></div></article>';
+      const ticketSummary = tickets.length
+        ? tickets.map(ticket => '<div class="meta">'+escapeHtml(ticket.name)+': KSh '+Number(ticket.price).toLocaleString("en-KE")+'</div>').join("")
+        : '<div class="meta">Ticket details coming soon</div>';
+      const priceLabel = lowestPrice === null ? "Price TBA" : "From KSh "+lowestPrice.toLocaleString("en-KE");
+      return '<article class="card" data-cat="'+cat+'"><div class="poster"><div class="mark">ST★R</div></div><div class="body"><h3>'+escapeHtml(ev.title)+'</h3><div class="meta">📅 '+escapeHtml(date)+'<br>📍 '+escapeHtml(ev.location || "Venue TBA")+'</div><p>'+escapeHtml(ev.description || "")+'</p><div class="price">'+priceLabel+'</div>'+ticketSummary+'<button class="primary" disabled>Tickets opening soon</button></div></article>';
     }).join("");
   }
   function updateAccountUI(user, role) {
