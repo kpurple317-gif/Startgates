@@ -322,7 +322,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
         : '<div class="meta">Ticket details coming soon</div>';
       const priceLabel = lowestPrice === null ? "Price TBA" : "From KSh "+lowestPrice.toLocaleString("en-KE");
       const poster = ev.image_url ? '<img src="'+escapeHtml(ev.image_url)+'" alt="'+escapeHtml(ev.title)+' event poster" loading="lazy" style="width:100%;height:100%;object-fit:cover">' : '<div class="mark">ST★R</div>';
-      const trailer = ev.trailer_url && /\\.(mp4|webm)(\\?|$)/i.test(ev.trailer_url) ? '<video controls preload="metadata" playsinline style="width:100%;border-radius:12px;margin-top:12px"><source src="'+escapeHtml(ev.trailer_url)+'"></video>' : '';
+      const trailer = ev.trailer_url && /\.(mp4|webm)(\?|$)/i.test(ev.trailer_url) ? '<video controls preload="metadata" playsinline style="width:100%;border-radius:12px;margin-top:12px"><source src="'+escapeHtml(ev.trailer_url)+'"></video>' : '';
       return '<article class="card" data-cat="'+cat+'"><div class="poster">'+poster+'</div><div class="body"><h3>'+escapeHtml(ev.title)+'</h3><div class="meta">📅 '+escapeHtml(date)+'<br>📍 '+escapeHtml(ev.location || "Venue TBA")+'</div><p>'+escapeHtml(ev.description || "")+'</p>'+trailer+'<div class="price">'+priceLabel+'</div>'+ticketSummary+'<button class="primary" disabled>Tickets opening soon</button></div></article>';
     }).join("");
     applyEventFilters();
