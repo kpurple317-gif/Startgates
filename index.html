@@ -475,9 +475,8 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       } catch (mediaError) {
         return toast("Event draft was saved, but media or ticket setup failed: "+mediaError.message+". You can retry by editing the event.");
       }
-      if (ticketError) return toast("Event saved as a draft, but ticket setup failed. Ask an admin to review it: " + ticketError.message);
       closeModal("orgModal");
-      toast("Event and " + rows.length + " ticket type(s) saved as a draft. It will appear publicly after admin approval.");
+      toast("Event, media and " + ticketTypes.length + " ticket type(s) saved as a draft. It will appear publicly after admin approval.");
       await loadDashboard();
     })();
   };
