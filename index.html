@@ -222,8 +222,6 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       $("authMessage").textContent = "Your account is ready. You're signed in.";
       closeModal("accountModal");
       toast("Welcome to StarGates.");
-      await loadEvents();
-      await loadDashboard();
       return;
     }
     $("authMessage").textContent = "Account created. Check your email and confirm your address. Then return here and log in with the same email and password you just used.";
@@ -234,7 +232,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const password = $("authPassword")?.value || "";
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
     $("authMessage").textContent = error ? error.message : "You're logged in as " + data.user.email;
-    if (!error) { closeModal("accountModal"); toast("Welcome back to StarGates."); await loadEvents(); await loadDashboard(); }
+    if (!error) { closeModal("accountModal"); toast("Welcome back to StarGates."); }
   };
   let recoveryVerified = false;
   window.sendPasswordReset = async function () {
