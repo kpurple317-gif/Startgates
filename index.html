@@ -101,7 +101,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 </div></div>
 
 <div class="modal" id="orgModal" onclick="if(event.target===this)closeModal('orgModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">ORGANIZER</div><h3>CREATE EVENT.</h3></div><button class="close" onclick="closeModal('orgModal')">×</button></div>
-  <div class="form"><label>Event name<input id="orgName" placeholder="e.g. Summer Festival"></label><label>Category<select id="orgCat"><option>Music</option><option>Parties</option><option>Sports</option><option>Other</option></select></label><label>Date<input id="orgDate" type="date"></label><label>Venue<input id="orgVenue" placeholder="Venue / location"></label><label>Description<textarea id="orgDesc" placeholder="Tell people what makes your event worth attending."></textarea></label><label>Event cover photo<input id="orgCover" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><label>Event trailer video<input id="orgVideo" type="file" accept="video/mp4,video/webm"><small class="note">MP4 or WebM · Maximum 50 MB</small></label><label>Or paste a video URL (optional)<input id="orgTrailer" type="url" placeholder="https://..."></label><label>Ticket types — add artwork to each ticket</label><div id="ticketTypeRows"><div class="ticket-type-row" style="border:1px solid #333;border-radius:14px;padding:12px;display:grid;gap:9px"><input class="ticket-type-name" placeholder="Ticket name — e.g. Early Bird" value="Early Bird"><input class="ticket-type-price" type="number" min="0" step="1" placeholder="Price in KSh — e.g. 500"><input class="ticket-type-quantity" type="number" min="1" step="1" placeholder="Quantity — e.g. 100"><label>Ticket artwork (optional)<input class="ticket-type-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label></div></div><button type="button" class="secondary" onclick="addTicketType()">+ ADD ANOTHER TICKET TYPE</button><label>Your platform commission %<input id="orgCommission" type="number" min="0" max="100" placeholder="5"></label><button class="primary" onclick="publishEvent()">PUBLISH EVENT</button></div>
+  <div class="form"><label>Event name<input id="orgName" placeholder="e.g. Summer Festival"></label><label>Category<select id="orgCat"><option>Music</option><option>Parties</option><option>Sports</option><option>Other</option></select></label><label>Date<input id="orgDate" type="date"></label><label>Venue<input id="orgVenue" placeholder="Venue / location"></label><label>Description<textarea id="orgDesc" placeholder="Tell people what makes your event worth attending."></textarea></label><label>Event cover photo<input id="orgCover" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><label>Event trailer video<input id="orgVideo" type="file" accept="video/mp4,video/webm"><small class="note">MP4 or WebM · Maximum 50 MB</small></label><label>Or paste a video URL (optional)<input id="orgTrailer" type="url" placeholder="https://..."></label><label>Ticket types — add artwork to each ticket</label><div id="ticketTypeRows"><div class="ticket-type-row" style="border:1px solid #333;border-radius:14px;padding:12px;display:grid;gap:9px"><input class="ticket-type-name" placeholder="Ticket name — e.g. Early Bird"><input class="ticket-type-price" type="number" min="0" step="1" placeholder="Price in KSh — e.g. 500"><input class="ticket-type-quantity" type="number" min="1" step="1" placeholder="Quantity — e.g. 100"><label>Ticket artwork (optional)<input class="ticket-type-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label></div></div><button type="button" class="secondary" onclick="addTicketType()">+ ADD ANOTHER TICKET TYPE</button><label>Your platform commission %<input id="orgCommission" type="number" min="0" max="100" placeholder="5"></label><button class="primary" onclick="publishEvent()">PUBLISH EVENT</button></div>
   <div class="note">Demo organizer flow. Production version saves this event to a database and publishes it to the marketplace.</div>
 </div></div>
 
@@ -416,18 +416,23 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const commission = Number($("orgCommission")?.value || 0);
     const ticketTypes = Array.from(document.querySelectorAll("#ticketTypeRows .ticket-type-row")).map(row => ({
       name: row.querySelector(".ticket-type-name")?.value.trim() || "",
-      priceText: row.querySelector(".ticket-type-price")?.value ?? "",
-      quantityText: row.querySelector(".ticket-type-quantity")?.value ?? "",
+      priceText: row.querySelector(".ticket-type-price")?.value.trim() || "",
+      quantityText: row.querySelector(".ticket-type-quantity")?.value.trim() || "",
       imageFile: row.querySelector(".ticket-type-image")?.files?.[0] || null
-    }));
-    const validTickets = ticketTypes.length > 0 && ticketTypes.every(ticket =>
-      ticket.name && ticket.priceText !== "" && Number.isFinite(Number(ticket.priceText)) &&
-      Number(ticket.priceText) >= 0 && ticket.quantityText !== "" &&
-      Number.isInteger(Number(ticket.quantityText)) && Number(ticket.quantityText) >= 1
+    })).filter(ticket => ticket.name || ticket.priceText || ticket.quantityText || ticket.imageFile);
+    if (!name) return toast("Enter an event name.");
+    if (!date) return toast("Choose the event date.");
+    if (!venue) return toast("Enter the event venue.");
+    if (!ticketTypes.length) return toast("Add at least one ticket type with a name, price and quantity.");
+    const invalidTicketIndex = ticketTypes.findIndex(ticket =>
+      !ticket.name || ticket.priceText === "" || !Number.isFinite(Number(ticket.priceText)) ||
+      Number(ticket.priceText) < 0 || ticket.quantityText === "" ||
+      !Number.isInteger(Number(ticket.quantityText)) || Number(ticket.quantityText) < 1
     );
-    if (!name || !date || !venue || !validTickets ||
-        !Number.isFinite(commission) || commission < 0 || commission > 100)
-      return toast("Complete the event details. Each ticket needs a name, valid price and quantity.");
+    if (invalidTicketIndex !== -1)
+      return toast("Ticket type " + (invalidTicketIndex + 1) + " needs a name, valid price and quantity of at least 1.");
+    if (!Number.isFinite(commission) || commission < 0 || commission > 100)
+      return toast("Platform commission must be between 0 and 100%.");
     (async () => {
       if (!sb) return toast("Database connection unavailable.");
       const { data: userData, error: authError } = await sb.auth.getUser();
