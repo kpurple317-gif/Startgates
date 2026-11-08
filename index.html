@@ -552,7 +552,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       }
       closeModal("orgModal");
       toast("Event, media and " + ticketTypes.length + " ticket type(s) saved as a draft. It will appear publicly after admin approval.");
-      await Promise.all([loadDashboard(), loadAdminEventReviews()]);
+      await loadDashboard();
     } catch (error) {
       console.error("StarGates event submission:", error);
       toast("Event submission failed. Please try again. " + (error?.message || ""));
