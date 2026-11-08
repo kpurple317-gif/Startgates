@@ -23,6 +23,19 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 .tabs{display:flex;gap:8px;overflow:auto;margin-bottom:18px}.tab{border:1px solid #333;background:#0b0b0b;color:#aaa;padding:9px 13px;border-radius:999px}.tab.active{background:#fff;color:#000}.mini-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.mini{padding:16px;border:1px solid #292929;border-radius:15px;background:#0b0b0b}.mini b{font-size:22px}.mini small{display:block;color:#777;margin-top:5px}
 .toast{position:fixed;z-index:100;left:50%;bottom:20px;transform:translate(-50%,100px);background:#fff;color:#000;padding:12px 17px;border-radius:999px;font-weight:900;transition:.3s;max-width:90%;text-align:center}.toast.show{transform:translate(-50%,0)}
 @media(max-width:800px){.nav a{display:none}.dash-grid{grid-template-columns:repeat(2,1fr)}.steps{grid-template-columns:repeat(2,1fr)}.cta{display:block}section{padding:60px 5vw}}@media(max-width:520px){.hero h1{letter-spacing:-5px}.count{grid-template-columns:repeat(2,1fr)}.steps{grid-template-columns:1fr}.cta{padding:30px}}
+ 
+/* StarGates editorial homepage refresh */
+.hero{min-height:680px;padding:88px 7vw 72px;display:grid;grid-template-columns:minmax(0,1.05fr) minmax(320px,.95fr);align-items:center;gap:5vw;text-align:left;background:radial-gradient(ellipse at 78% 45%,#242b17 0%,#10120c 24%,#080908 57%,#050505 80%);isolation:isolate}
+.hero:after{width:660px;height:660px;right:-150px;left:auto;top:5%;border-color:#d7ff8a12;box-shadow:0 0 0 85px #d7ff8a08,0 0 0 170px #d7ff8a05}
+.hero-copy{max-width:700px}.hero-eyebrow{display:flex;align-items:center;gap:10px;color:#c7ff4a;font-size:10px;font-weight:900;letter-spacing:3px}.live-dot{width:7px;height:7px;border-radius:50%;background:var(--lime);box-shadow:0 0 15px #c7ff4a}
+.hero h1{font-size:clamp(54px,8vw,112px);line-height:.88;letter-spacing:-.075em;margin:28px 0 22px;font-weight:950}.hero h1 em{font-style:normal;color:var(--lime)}.hero p{max-width:510px;margin:0 0 28px;color:#aaa;font-size:16px;line-height:1.8}.hero .actions{justify-content:flex-start}.hero .primary{background:var(--lime);color:#080908;padding:15px 21px}.hero .primary span{font-size:17px;margin-left:12px}.hero .secondary{border-color:#4b5140;color:#eee;padding:14px 20px}.hero-foot{display:flex;align-items:center;gap:13px;margin-top:54px;color:#777;font-size:9px;letter-spacing:2px;font-weight:800}.hero-foot i{width:4px;height:4px;border-radius:50%;background:var(--lime)}
+.hero-art{height:475px;position:relative;display:grid;place-items:center}.art-glow{position:absolute;width:300px;height:300px;border-radius:50%;background:#c7ff4a1c;filter:blur(70px)}.art-orbit{position:absolute;border:1px solid #c7ff4a35;border-radius:50%;transform:rotate(-24deg)}.orbit-one{width:390px;height:220px}.orbit-two{width:460px;height:300px;transform:rotate(38deg);border-color:#fff2}.art-ticket{position:relative;z-index:2;width:min(330px,78%);min-height:390px;padding:22px 24px;background:linear-gradient(145deg,#e5f5c8,#a8c76b 48%,#536b31);color:#111;border-radius:8px;transform:rotate(-7deg);box-shadow:0 28px 90px #000b;display:flex;flex-direction:column;justify-content:space-between}.art-ticket:before,.art-ticket:after{content:"";position:absolute;top:65%;width:28px;height:28px;border-radius:50%;background:#11120d}.art-ticket:before{left:-14px}.art-ticket:after{right:-14px}.art-ticket-top,.art-ticket-bottom{display:flex;justify-content:space-between;align-items:center;font-size:9px;font-weight:900;letter-spacing:1.5px}.art-ticket-top span:last-child{font-size:22px}.art-ticket-main{padding:32px 0}.art-kicker{display:block;font-size:9px;letter-spacing:3px;font-weight:900;margin-bottom:15px}.art-ticket-main strong{display:block;font-size:clamp(38px,5vw,57px);line-height:.86;letter-spacing:-4px}.art-ticket-main strong span{color:#607b30}.art-ticket-bottom{border-top:1px dashed #273617;padding-top:16px;font-size:8px}.art-stamp{position:absolute;z-index:3;right:0;bottom:45px;background:#111;color:#fff;border:1px solid #c7ff4a;padding:16px 18px;font-size:13px;line-height:1.1;font-weight:950;letter-spacing:1px;transform:rotate(8deg);box-shadow:0 10px 30px #0008}.art-stamp span{color:var(--lime);font-size:20px}
+.intro-strip{padding:20px 7vw;display:flex;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid #ffffff12;border-bottom:1px solid #ffffff12;background:#0b0c09}.intro-strip span{color:#818579;font-size:9px;letter-spacing:2px;font-weight:900}.intro-strip b{font-size:13px;color:#e8eadf}.intro-strip i{font-style:normal;color:var(--lime)}
+#events{padding-top:90px}#events .head h2{letter-spacing:-.06em}#events .head p{line-height:1.7}.event-search input{max-width:620px;border-radius:12px;background:#0d0f0b;border-color:#303329;padding:16px 18px}.filters{gap:10px;margin:18px 0 25px}.filter{border-color:#303329;background:#0d0f0b;padding:10px 17px}.filter.active{background:var(--lime);border-color:var(--lime);color:#080908}.grid{gap:20px}.card{border-radius:17px;background:#0d0f0b;border-color:#262a20}.card:hover{border-color:#718d43;box-shadow:0 18px 40px #0006}.poster{height:235px;background:radial-gradient(circle at 50% 40%,#343d25,#11140e 65%,#0a0b09)}.body{padding:21px}.body h3{font-size:20px;letter-spacing:-.5px}.body .price{color:var(--lime)}.body button.primary{border-radius:10px;background:var(--lime);color:#080908}.event-loading{min-height:235px;border:1px solid #25291f;border-radius:17px;background:linear-gradient(145deg,#10130d,#0a0b09);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#e8eadf}.event-loading b{font-size:13px}.event-loading small{font-size:11px;color:#818579}.loading-orbit{width:25px;height:25px;border:2px solid #4b5639;border-top-color:var(--lime);border-radius:50%;animation:sgspin 1s linear infinite}@keyframes sgspin{to{transform:rotate(360deg)}}
+.dashboard{background:#080908;border-top:1px solid #ffffff10;border-bottom:1px solid #ffffff10}.stat,.dash-panel,.step{background:#0e100c;border-color:#292d22}.cta{background:var(--lime);border-radius:18px}.cta button{border-radius:10px}footer{background:#050605}
+@media(max-width:800px){.hero{min-height:auto;grid-template-columns:1fr;padding:75px 6vw 50px;gap:12px}.hero-art{height:390px;max-width:540px;width:100%;margin:0 auto}.art-ticket{min-height:320px}.hero-foot{margin-top:38px}.intro-strip{flex-wrap:wrap;justify-content:center;text-align:center}.intro-strip span{width:100%}}
+@media(max-width:520px){.hero{padding:60px 6vw 35px}.hero h1{font-size:clamp(51px,14vw,76px);letter-spacing:-.07em}.hero p{font-size:14px}.hero-art{height:330px}.art-ticket{width:245px;min-height:285px;padding:18px}.art-ticket-main strong{font-size:42px}.art-stamp{right:3px;bottom:18px}.orbit-one{width:300px}.orbit-two{width:340px}.hero-foot{font-size:8px;gap:9px}.intro-strip b{font-size:12px}#events{padding-top:65px}}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -32,37 +45,43 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   <nav class="nav"><a href="#events">Explore</a><a href="#dashboard">Dashboard</a><a href="#how">How it works</a><button onclick="openAccount()">ACCOUNT</button><button onclick="openOrganizer()">HOST AN EVENT</button></nav>
 </header>
 
-<section class="hero">
-  <div>
-    <div class="kicker">THE EVENT MARKETPLACE</div>
-    <h1>STAR <span>GATES.</span></h1>
-    <p>Discover events. Sell out your event. One place for the people who create the night and the people who live it.</p>
-    <div class="actions"><a class="primary" href="#events">EXPLORE EVENTS</a><button class="secondary" onclick="openOrganizer()">HOST AN EVENT</button></div>
+<section id="home" class="hero">
+  <div class="hero-copy">
+    <div class="hero-eyebrow"><span class="live-dot"></span> YOUR EVENT DESTINATION</div>
+    <h1>MAKE<br>ROOM FOR<br><em>THE MOMENT.</em></h1>
+    <p>Find the events worth leaving home for. Discover new experiences, explore ticket options and connect with the people bringing them to life.</p>
+    <div class="actions"><a class="primary" href="#events">DISCOVER EVENTS <span aria-hidden="true">↗</span></a><button class="secondary" onclick="openOrganizer()">I'M AN ORGANISER</button></div>
+    <div class="hero-foot"><span>DISCOVER</span><i></i><span>CONNECT</span><i></i><span>EXPERIENCE</span></div>
+  </div>
+  <div class="hero-art" aria-hidden="true">
+    <div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div>
+    <div class="art-glow"></div>
+    <div class="art-ticket">
+      <div class="art-ticket-top"><span>STARGATES / 001</span><span>✦</span></div>
+      <div class="art-ticket-main"><span class="art-kicker">THE NIGHT IS YOURS</span><strong>GO<br>BEYOND<br>ORDINARY<span>.</span></strong></div>
+      <div class="art-ticket-bottom"><span>GOOD PEOPLE. GREAT EXPERIENCES.</span><b>SG—01</b></div>
+    </div>
+    <div class="art-stamp">FIND<br>YOUR<br>SCENE <span>↗</span></div>
   </div>
 </section>
 
-<section>
-  <div class="head"><div><div class="kicker">COUNTING DOWN</div><h2>NEXT UP.</h2></div><p>The next big night is getting closer. Your ticket belongs here.</p></div>
-  <div class="count"><div class="time"><span id="d" class="num">00</span><span class="lab">Days</span></div><div class="time"><span id="h" class="num">00</span><span class="lab">Hours</span></div><div class="time"><span id="m" class="num">00</span><span class="lab">Minutes</span></div><div class="time"><span id="s" class="num">00</span><span class="lab">Seconds</span></div></div>
-  <p style="text-align:center;color:#666;font-size:12px;margin-top:16px">STARGATES SUMMER RAVE • 25 SEPT 2026 • 8:00 PM</p>
+<section class="intro-strip">
+  <span>FOR THE CURIOUS</span><b>Discover something new.</b><i>✦</i><b>Make plans that matter.</b><span>FOR THE CREATORS</span>
 </section>
 
 <section id="events">
   <div class="head"><div><div class="kicker">DISCOVER</div><h2>EVENTS.</h2></div><p>Music, parties, shows, sports and more. Pick a night and get moving.</p></div>
   <div class="event-search"><input id="eventSearch" type="search" placeholder="Search events, venues or descriptions..." aria-label="Search events"></div>
   <div class="filters"><button class="filter active" onclick="filterEvents('all',this)">All</button><button class="filter" onclick="filterEvents('music',this)">Music</button><button class="filter" onclick="filterEvents('party',this)">Parties</button><button class="filter" onclick="filterEvents('sports',this)">Sports</button><button class="filter" onclick="filterEvents('other',this)">Other</button></div>
-  <div class="grid" id="eventGrid">
-    <article class="card" data-cat="party"><div class="poster"><span class="tag">TRENDING</span><div class="mark">ST★R</div></div><div class="body"><h3>STARGATES SUMMER RAVE</h3><div class="meta">📅 25 Sept 2026<br>📍 Nairobi • Venue TBA<br>🕘 8:00 PM — Late</div><div class="price">From KSh 500</div><button class="primary" onclick="openBuy('STARGATES SUMMER RAVE',500,800)">GET TICKETS</button></div></article>
-    <article class="card" data-cat="music"><div class="poster"><span class="tag">MUSIC</span><div class="mark">LIVE</div></div><div class="body"><h3>ROOFTOP SESSIONS</h3><div class="meta">📅 10 Oct 2026<br>📍 Nairobi<br>🎧 Live DJs & guests</div><div class="price">From KSh 1,000</div><button class="primary" onclick="openBuy('ROOFTOP SESSIONS',1000,1500)">GET TICKETS</button></div></article>
-    <article class="card" data-cat="sports"><div class="poster"><span class="tag">SPORTS</span><div class="mark">GAME</div></div><div class="body"><h3>THE BIG MATCH</h3><div class="meta">📅 3 Oct 2026<br>📍 Nairobi<br>🏟️ Stadium event</div><div class="price">From KSh 300</div><button class="primary" onclick="openBuy('THE BIG MATCH',300,600)">GET TICKETS</button></div></article>
+  <div class="grid" id="eventGrid" aria-live="polite">
+    <div class="event-loading"><span class="loading-orbit"></span><b>Finding your next experience</b><small>Loading published events…</small></div>
+    <div class="event-loading"><span class="loading-orbit"></span><b>Fresh plans are on the way</b><small>Checking the latest listings…</small></div>
+    <div class="event-loading"><span class="loading-orbit"></span><b>Made for going out</b><small>Getting the event board ready…</small></div>
   </div>
   <p id="eventSearchEmpty" class="note" hidden>No events match that search. Try another name or venue.</p>
 </section>
 
-<section>
-  <div class="head"><div><div class="kicker">WATCH BEFORE YOU GO</div><h2>TRAILER.</h2></div><p>Every event can have its own trailer so people know what they're getting into.</p></div>
-  <div class="trailer"><video class="video" controls playsinline poster=""><source src="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4" type="video/mp4">Your browser does not support video.</video><div class="trailer-info"><h3>STARGATES SUMMER RAVE — OFFICIAL TRAILER</h3><p>Demo trailer for now. Replace this video with the client's real party trailer when you have it.</p></div></div>
-</section>
+
 
 <section class="dashboard" id="dashboard">
   <div class="head"><div><div class="kicker">PLATFORM OWNER</div><h2>CONTROL ROOM.</h2></div><p>See what is happening across the marketplace: events, buyers, sales and your commission.</p></div>
@@ -80,7 +99,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 
 <section id="how">
   <div class="head"><div><div class="kicker">SIMPLE FOR EVERYONE</div><h2>HOW IT WORKS.</h2></div><p>From finding an event to getting through the door.</p></div>
-  <div class="steps"><div class="step"><b>01 — Discover</b><span>Find an event, check the details and watch the trailer.</span></div><div class="step"><b>02 — Choose</b><span>Pick your ticket type and quantity, then enter your details.</span></div><div class="step"><b>03 — Get your ticket</b><span>After payment, your unique ticket can be sent straight to your email.</span></div><div class="step"><b>04 — Scan</b><span>Show the QR ticket at the entrance. Staff verify it before entry.</span></div></div>
+  <div class="steps"><div class="step"><b>01 — Explore</b><span>Browse published events and find an experience that fits your plans.</span></div><div class="step"><b>02 — Compare</b><span>Review the event details, venue, date and available ticket options.</span></div><div class="step"><b>03 — Get ready</b><span>Follow the event's confirmed ticket and entry instructions.</span></div><div class="step"><b>04 — Experience</b><span>Show up, meet your people and make the moment count.</span></div></div>
 </section>
 
 <section><div class="cta"><div><div class="kicker">FOR ORGANIZERS</div><h2>SELL YOUR<br>EVENT.</h2><p>Create your event, choose your own ticket prices and quantities, publish it and watch your sales grow.</p></div><button onclick="openOrganizer()">CREATE / MANAGE EVENTS →</button></div></section>
