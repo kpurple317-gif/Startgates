@@ -494,6 +494,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
         .ilike("title", name)
         .gte("event_date", dayStart.toISOString())
         .lt("event_date", nextDay.toISOString())
+        .neq("status", "rejected")
         .limit(1);
       if (duplicateCheckError) return toast("Could not check for duplicate events. Please try again.");
       if (matchingEvents?.length) {
