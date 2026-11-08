@@ -7,7 +7,7 @@
 <title>STARGATES — Event Marketplace</title>
 <style>
 :root{--bg:#050505;--panel:#101010;--panel2:#151515;--text:#fff;--muted:#929292;--line:#292929;--lime:#c7ff4a}
-*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}
+*{box-sizing:border-box}html{scroll-behavior:smooth}button{transition:opacity .15s ease,transform .15s ease,background-color .15s ease}button:active:not(:disabled){transform:scale(.98)}button:disabled{cursor:wait;opacity:.62}button[aria-busy="true"]{position:relative}body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,sans-serif}button,input,select,textarea{font:inherit}button{cursor:pointer}a{color:inherit;text-decoration:none}
 header{position:sticky;top:0;z-index:40;height:70px;padding:0 5vw;display:flex;align-items:center;justify-content:space-between;background:#050505e8;backdrop-filter:blur(18px);border-bottom:1px solid #ffffff12}.brand{font-weight:950;letter-spacing:2px}.brand i{font-style:normal;color:var(--lime)}.nav{display:flex;align-items:center;gap:20px;color:#bbb;font-size:14px}.nav a:hover{color:#fff}.nav button{border:0;background:#fff;color:#000;padding:11px 17px;border-radius:999px;font-weight:900}
 .hero{min-height:76vh;padding:105px 6vw 75px;display:grid;place-items:center;text-align:center;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 25%,#303030,#0b0b0b 42%,#050505 72%)}.hero:after{content:"";position:absolute;width:520px;height:520px;border:1px solid #fff1;border-radius:50%;box-shadow:0 0 0 90px #fff3,0 0 0 180px #fff2}.hero>*{position:relative;z-index:1}.kicker{font-size:11px;letter-spacing:4px;color:#888;font-weight:900;text-transform:uppercase}.hero h1{font-size:clamp(65px,15vw,155px);line-height:.8;letter-spacing:-8px;margin:25px 0;font-weight:1000}.hero h1 span{color:transparent;-webkit-text-stroke:1px #fff}.hero p{color:#aaa;max-width:650px;margin:0 auto 28px;line-height:1.7}.actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}.primary,.secondary{padding:13px 20px;border-radius:999px;font-weight:900}.primary{background:#fff;color:#000;border:0}.secondary{background:transparent;color:#fff;border:1px solid #444}
 section{padding:75px 6vw}.head{display:flex;justify-content:space-between;gap:25px;align-items:end;margin-bottom:28px}.head h2{font-size:clamp(38px,7vw,70px);line-height:.9;margin:8px 0;letter-spacing:-4px}.head p{color:#888;max-width:430px}.count{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:760px;margin:0 auto}.time{border:1px solid #292929;background:#101010;border-radius:18px;padding:18px;text-align:center}.num{display:block;font-size:clamp(34px,7vw,65px);font-weight:1000;letter-spacing:-3px}.lab{font-size:10px;color:#777;text-transform:uppercase;letter-spacing:2px}
@@ -127,6 +127,24 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   const state = { eventName: "", earlyPrice: 0, regularPrice: 0, earlyQty: 0, regularQty: 0 };
   let selectedEventCategory = "all";
   let toastTimer;
+  let eventSubmitInProgress = false;
+  const actionLocks = new Set();
+  function setButtonBusy(button, busy, label) {
+    if (!button) return;
+    if (busy) {
+      if (!button.dataset.originalLabel) button.dataset.originalLabel = button.textContent;
+      button.disabled = true;
+      button.setAttribute("aria-busy","true");
+      if (label) button.textContent = label;
+    } else {
+      button.disabled = false;
+      button.removeAttribute("aria-busy");
+      if (button.dataset.originalLabel) {
+        button.textContent = button.dataset.originalLabel;
+        delete button.dataset.originalLabel;
+      }
+    }
+  }
 
   window.toast = function (message) {
     const el = $("toast");
@@ -262,12 +280,21 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const grid = $("eventGrid");
     if (!grid) return;
     const { data, error } = await sb.from("events")
-      .select("id,title,description,location,image_url,trailer_url,event_date,status,ticket_types(name,price,quantity,image_url)")
+      .select("id,organizer_id,title,description,location,image_url,trailer_url,event_date,status,ticket_types(name,price,quantity,image_url)")
       .eq("status","published").order("event_date");
     if (error) { console.error("StarGates events:",error); grid.innerHTML = "<p class='note'>Events are temporarily unavailable. Please try again later.</p>"; return; }
     if (!data?.length) { grid.innerHTML = "<p class='note'>No events have been published yet. Check back soon.</p>"; return; }
+    const uniqueEvents = new Map();
+    data.forEach(ev => {
+      const day = ev.event_date ? new Date(ev.event_date).toISOString().slice(0,10) : "no-date";
+      const key = String(ev.organizer_id || "") + "|" + String(ev.title || "").trim().toLowerCase() + "|" + day;
+      const existing = uniqueEvents.get(key);
+      const score = item => (item.ticket_types?.length || 0) + (item.image_url ? 2 : 0) + (item.trailer_url ? 1 : 0);
+      if (!existing || score(ev) > score(existing)) uniqueEvents.set(key, ev);
+    });
+    const visibleEvents = Array.from(uniqueEvents.values());
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-    grid.innerHTML = data.map(ev => {
+    grid.innerHTML = visibleEvents.map(ev => {
       const tickets = ev.ticket_types || [];
       const prices = tickets.map(ticket => Number(ticket.price)).filter(price => Number.isFinite(price));
       const lowestPrice = prices.length ? Math.min(...prices) : null;
@@ -311,7 +338,9 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (applicationsTab) applicationsTab.style.display = isAdmin ? "inline-flex" : "none";
     const usersTab = $("adminUsersTab");
     if (usersTab) usersTab.style.display = isAdmin ? "inline-flex" : "none";
-    if (isAdmin) { await loadAdminEventReviews(); await loadAdminApplications(); await loadAdminUsers(); }
+    if (isAdmin) {
+      await Promise.all([loadAdminEventReviews(), loadAdminApplications(), loadAdminUsers()]);
+    }
     const { data: events, error } = await sb.from("events")
       .select("id,title,status,event_date,location,ticket_types(name,price,quantity)")
       .eq("organizer_id",auth.user.id).order("created_at",{ascending:false});
@@ -409,7 +438,9 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     rows.appendChild(row);
   };
 
-  window.publishEvent = function () {
+  window.publishEvent = async function () {
+    if (eventSubmitInProgress) return toast("Your event is already being submitted. Please wait.");
+    const button = document.querySelector('#orgModal button[onclick="publishEvent()"]');
     const name = $("orgName")?.value.trim() || "";
     const date = $("orgDate")?.value || "";
     const venue = $("orgVenue")?.value.trim() || "";
@@ -433,17 +464,44 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       return toast("Ticket type " + (invalidTicketIndex + 1) + " needs a name, valid price and quantity of at least 1.");
     if (!Number.isFinite(commission) || commission < 0 || commission > 100)
       return toast("Platform commission must be between 0 and 100%.");
-    (async () => {
+
+    eventSubmitInProgress = true;
+    setButtonBusy(button, true, "SUBMITTING EVENT...");
+    try {
       if (!sb) return toast("Database connection unavailable.");
       const { data: userData, error: authError } = await sb.auth.getUser();
-      if (authError || !userData.user) { closeModal("orgModal"); openModal("accountModal"); return toast("Log in first, then submit your event."); }
+      if (authError || !userData.user) {
+        closeModal("orgModal"); openModal("accountModal");
+        return toast("Log in first, then submit your event.");
+      }
+
+      const dayStart = new Date(date + "T00:00:00");
+      const nextDay = new Date(dayStart);
+      nextDay.setDate(nextDay.getDate() + 1);
+      const { data: matchingEvents, error: duplicateCheckError } = await sb.from("events")
+        .select("id,title,status")
+        .eq("organizer_id", userData.user.id)
+        .ilike("title", name)
+        .gte("event_date", dayStart.toISOString())
+        .lt("event_date", nextDay.toISOString())
+        .limit(1);
+      if (duplicateCheckError) return toast("Could not check for duplicate events. Please try again.");
+      if (matchingEvents?.length) {
+        const status = matchingEvents[0].status === "published" ? "already published" :
+          matchingEvents[0].status === "draft" ? "already submitted and awaiting review" :
+          "already on your event record";
+        return toast("This event is " + status + ". Open My Events instead of submitting it again.");
+      }
+
+      const eventDate = new Date(date + "T20:00:00").toISOString();
       const { data: event, error } = await sb.from("events").insert({
         organizer_id: userData.user.id, title: name, description: $("orgDesc")?.value.trim() || "",
-        location: venue, event_date: new Date(date + "T20:00:00").toISOString(),
+        location: venue, event_date: eventDate,
         trailer_url: $("orgTrailer")?.value.trim() || null, status: "draft",
         commission_percent: commission
       }).select("id").single();
       if (error) return toast(error.message.includes("row-level security") ? "Your account needs organizer approval before creating events." : error.message);
+
       const uploadMedia = async (file, label) => {
         if (!file) return null;
         const allowed = ["image/jpeg","image/png","image/webp","image/gif","video/mp4","video/webm"];
@@ -478,15 +536,21 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
         const { error: ticketError } = await sb.from("ticket_types").insert(rows);
         if (ticketError) throw ticketError;
       } catch (mediaError) {
-        return toast("Event draft was saved, but media or ticket setup failed: "+mediaError.message+". The organiser may need to resubmit the media.");
+        return toast("Event draft was saved, but media or ticket setup failed: "+mediaError.message+". Contact admin before submitting it again.");
       }
       closeModal("orgModal");
       toast("Event, media and " + ticketTypes.length + " ticket type(s) saved as a draft. It will appear publicly after admin approval.");
-      await loadDashboard();
-    })();
+      await Promise.all([loadDashboard(), loadAdminEventReviews()]);
+    } catch (error) {
+      console.error("StarGates event submission:", error);
+      toast("Event submission failed. Please try again. " + (error?.message || ""));
+    } finally {
+      eventSubmitInProgress = false;
+      setButtonBusy(button, false);
+    }
   };
 
-  async function loadAdminEventReviews() {
+    async function loadAdminEventReviews() {
     const list = $("adminReviewList");
     if (!list || !sb) return;
     const { data, error } = await sb.from("events")
@@ -495,7 +559,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (error) { list.innerHTML = "<p class='note'>Could not load event submissions.</p>"; return; }
     if (!data?.length) { list.innerHTML = "<p class='note'>No event submissions are waiting for review.</p>"; return; }
     const safe = value => String(value ?? "").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-    list.innerHTML = data.map(ev => "<div class='ticket' style='display:block;margin:12px 0'><b>"+safe(ev.title)+"</b><small style='display:block'>"+safe(ev.location)+" · "+(ev.event_date?new Date(ev.event_date).toLocaleString():"Date TBA")+"</small><p>"+safe(ev.description)+"</p>"+(ev.image_url?"<img src='"+safe(ev.image_url)+"' alt='Event poster' style='width:100%;max-height:220px;object-fit:cover;border-radius:12px'>":"")+(ev.trailer_url&&/\\.(mp4|webm)(\\?|$)/i.test(ev.trailer_url)?"<video controls preload='metadata' playsinline style='width:100%;max-height:220px;margin-top:10px'><source src='"+safe(ev.trailer_url)+"'></video>":"")+(ev.ticket_types||[]).filter(t=>t.image_url).map(t=>"<div style='margin-top:10px'><small>"+safe(t.name)+" ticket artwork</small><img src='"+safe(t.image_url)+"' alt='Ticket artwork' style='width:100%;max-height:130px;object-fit:cover;border-radius:10px'></div>").join("")+"<div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:12px'><button class='primary' onclick='approveEvent("+JSON.stringify(ev.id)+")'>APPROVE & PUBLISH</button><button class='secondary' onclick='rejectEvent("+JSON.stringify(ev.id)+")'>REJECT EVENT</button></div></div>").join("");
+    list.innerHTML = data.map(ev => "<div class='ticket' style='display:block;margin:12px 0'><b>"+safe(ev.title)+"</b><small style='display:block'>"+safe(ev.location)+" · "+(ev.event_date?new Date(ev.event_date).toLocaleString():"Date TBA")+"</small><p>"+safe(ev.description)+"</p>"+(ev.image_url?"<img src='"+safe(ev.image_url)+"' alt='Event poster' style='width:100%;max-height:220px;object-fit:cover;border-radius:12px'>":"")+(ev.trailer_url&&/\\.(mp4|webm)(\\?|$)/i.test(ev.trailer_url)?"<video controls preload='metadata' playsinline style='width:100%;max-height:220px;margin-top:10px'><source src='"+safe(ev.trailer_url)+"'></video>":"")+(ev.ticket_types||[]).filter(t=>t.image_url).map(t=>"<div style='margin-top:10px'><small>"+safe(t.name)+" ticket artwork</small><img src='"+safe(t.image_url)+"' alt='Ticket artwork' style='width:100%;max-height:130px;object-fit:cover;border-radius:10px'></div>").join("")+"<div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:12px'><button class='primary' onclick='approveEvent("+JSON.stringify(ev.id)+",this)'>APPROVE & PUBLISH</button><button class='secondary' onclick='rejectEvent("+JSON.stringify(ev.id)+",this)'>REJECT EVENT</button></div></div>").join("");
   }
 
 
@@ -550,56 +614,88 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     toast(decision === "approved" ? "Application approved. Organiser notification email sent." : "Application rejected. Notification email sent.");
   };
 
-  window.approveEvent = async function (eventId) {
+  window.approveEvent = async function (eventId, button) {
+    const lockKey = "approve:" + eventId;
     if (!sb || !eventId) return;
-    const { data: auth, error: authError } = await sb.auth.getUser();
-    if (authError || !auth.user) return toast("Log in as the platform admin first.");
-    const { data: profile, error: profileError } = await sb.from("profiles").select("role").eq("id",auth.user.id).maybeSingle();
-    if (profileError) return toast("Could not verify admin access: " + profileError.message);
-    if (profile?.role !== "admin") return toast("Only platform admins can publish events.");
-    const { data: published, error } = await sb.from("events")
-      .update({status:"published"})
-      .eq("id",eventId)
-      .eq("status","draft")
-      .select("id,status")
-      .maybeSingle();
-    if (error) return toast("Could not publish event: " + error.message);
-    if (!published) {
-      await loadAdminEventReviews();
-      return toast("Nothing was published. This event may already be reviewed or no longer exist. Refresh and check the event status.");
+    if (actionLocks.has(lockKey)) return toast("This event is already being processed.");
+    actionLocks.add(lockKey);
+    setButtonBusy(button, true, "PUBLISHING...");
+    try {
+      const { data: auth, error: authError } = await sb.auth.getUser();
+      if (authError || !auth.user) return toast("Log in as the platform admin first.");
+      const { data: profile, error: profileError } = await sb.from("profiles").select("role").eq("id",auth.user.id).maybeSingle();
+      if (profileError) return toast("Could not verify admin access: " + profileError.message);
+      if (profile?.role !== "admin") return toast("Only platform admins can publish events.");
+
+      const { data: target, error: targetError } = await sb.from("events")
+        .select("id,organizer_id,title,event_date,status").eq("id",eventId).maybeSingle();
+      if (targetError || !target) return toast("Could not find this event. Refresh the review list.");
+      if (target.status !== "draft") return toast("This event has already been reviewed.");
+
+      const { data: duplicates, error: duplicateError } = await sb.from("events")
+        .select("id").eq("organizer_id",target.organizer_id).ilike("title",target.title)
+        .eq("event_date",target.event_date).eq("status","published").neq("id",eventId).limit(1);
+      if (duplicateError) return toast("Could not check for an existing published copy. Try again.");
+      if (duplicates?.length) {
+        await loadAdminEventReviews();
+        return toast("A matching event is already published. This duplicate was not published.");
+      }
+
+      const { data: published, error } = await sb.from("events")
+        .update({status:"published"}).eq("id",eventId).eq("status","draft")
+        .select("id,status").maybeSingle();
+      if (error) return toast("Could not publish event: " + error.message);
+      if (!published) {
+        await loadAdminEventReviews();
+        return toast("This event was already reviewed or no longer exists.");
+      }
+      const { error: mailError } = await sb.functions.invoke("notify-organizer-decision", {
+        body: { kind: "event", id: eventId }
+      });
+      await Promise.all([loadAdminEventReviews(), loadEvents()]);
+      if (mailError) return toast("Event published, but the organiser email was not sent. Check the email setup.");
+      toast("Event approved and published. Organiser notification email sent.");
+    } catch (error) {
+      console.error("StarGates approve event:", error);
+      toast("Could not complete approval. Please refresh and check the event status.");
+    } finally {
+      actionLocks.delete(lockKey);
+      setButtonBusy(button, false);
     }
-    const { error: mailError } = await sb.functions.invoke("notify-organizer-decision", {
-      body: { kind: "event", id: eventId }
-    });
-    await loadAdminEventReviews();
-    await loadEvents();
-    await loadDashboard();
-    if (mailError) return toast("Event published, but the organiser email was not sent. Check the email setup.");
-    toast("Event approved and published. Organiser notification email sent.");
   };
 
-  window.rejectEvent = async function (eventId) {
+  window.rejectEvent = async function (eventId, button) {
+    const lockKey = "reject:" + eventId;
     if (!sb || !eventId) return;
-    const { data: auth } = await sb.auth.getUser();
-    if (!auth.user) return toast("Log in as a platform admin first.");
-    const { data: profile } = await sb.from("profiles").select("role").eq("id",auth.user.id).maybeSingle();
-    if (profile?.role !== "admin") return toast("Only platform admins can reject events.");
+    if (actionLocks.has(lockKey)) return toast("This event is already being processed.");
     if (!confirm("Reject this event submission? The organiser will be notified by email.")) return;
-    const { data: rejected, error } = await sb.from("events").update({status:"rejected"})
-      .eq("id",eventId).eq("status","draft").select("id,status").maybeSingle();
-    if (error) return toast("Could not reject event: " + error.message);
-    if (!rejected) return toast("This event was already reviewed or could not be found.");
-    const { error: mailError } = await sb.functions.invoke("notify-organizer-decision", {
-      body: { kind: "event", id: eventId }
-    });
-    await loadAdminEventReviews();
-    await loadEvents();
-    await loadDashboard();
-    if (mailError) return toast("Event rejected, but the organiser email was not sent. Check the email setup.");
-    toast("Event rejected. Organiser notification email sent.");
+    actionLocks.add(lockKey);
+    setButtonBusy(button, true, "REJECTING...");
+    try {
+      const { data: auth } = await sb.auth.getUser();
+      if (!auth.user) return toast("Log in as the platform admin first.");
+      const { data: profile } = await sb.from("profiles").select("role").eq("id",auth.user.id).maybeSingle();
+      if (profile?.role !== "admin") return toast("Only platform admins can reject events.");
+      const { data: rejected, error } = await sb.from("events").update({status:"rejected"})
+        .eq("id",eventId).eq("status","draft").select("id,status").maybeSingle();
+      if (error) return toast("Could not reject event: " + error.message);
+      if (!rejected) return toast("This event was already reviewed or could not be found.");
+      const { error: mailError } = await sb.functions.invoke("notify-organizer-decision", {
+        body: { kind: "event", id: eventId }
+      });
+      await Promise.all([loadAdminEventReviews(), loadDashboard()]);
+      if (mailError) return toast("Event rejected, but the organiser email was not sent. Check the email setup.");
+      toast("Event rejected. Organiser notification email sent.");
+    } catch (error) {
+      console.error("StarGates reject event:", error);
+      toast("Could not complete rejection. Please refresh and check the event status.");
+    } finally {
+      actionLocks.delete(lockKey);
+      setButtonBusy(button, false);
+    }
   };
 
-  window.verifyTicket = function () {
+    window.verifyTicket = function () {
     const code = $("verifyCode")?.value.trim() || "";
     if (!code) {
       if ($("verifyResult")) $("verifyResult").textContent = "Enter a ticket ID first.";
