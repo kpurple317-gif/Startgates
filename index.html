@@ -405,19 +405,22 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     closeModal("organizerProfileModal");
     openEventDetails(eventId);
   });
-  const eventGrid = $("eventGrid");
-  eventGrid?.addEventListener("click", event => {
-    if (event.target.closest("a,video")) return;
-    const card = event.target.closest(".event-card");
+  // Capture event-card interactions at document level so nested poster, text,
+  // and CTA clicks continue working even if the event grid is re-rendered.
+  document.addEventListener("click", event => {
+    const target = event.target instanceof Element ? event.target : event.target?.parentElement;
+    if (!target || target.closest("a,video,button[data-open-organizer],[data-profile-event]")) return;
+    const card = target.closest("#eventGrid .event-card");
     if (card) openEventDetails(card.dataset.eventId);
-  });
-  eventGrid?.addEventListener("keydown", event => {
+  }, true);
+  document.addEventListener("keydown", event => {
     if (event.key !== "Enter" && event.key !== " ") return;
-    const card = event.target.closest(".event-card");
-    if (!card) return;
+    const target = event.target instanceof Element ? event.target : null;
+    const card = target?.closest("#eventGrid .event-card");
+    if (!card || target.closest("button,a,input,select,textarea")) return;
     event.preventDefault();
     openEventDetails(card.dataset.eventId);
-  });
+  }, true);
   function updateAccountUI(user, role) {
     const authForm = $("authForm");
     const signedInPanel = $("signedInPanel");
