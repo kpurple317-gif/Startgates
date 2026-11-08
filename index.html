@@ -327,7 +327,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
         : '<div class="meta">Ticket details coming soon</div>';
       const priceLabel = lowestPrice === null ? "Price TBA" : "From KSh "+lowestPrice.toLocaleString("en-KE");
       const poster = ev.image_url ? '<img src="'+escapeHtml(ev.image_url)+'" alt="'+escapeHtml(ev.title)+' event poster" loading="lazy" style="width:100%;height:100%;object-fit:cover">' : '<div class="mark">ST★R</div>';
-      return '<article class="card event-card" data-event-id="'+escapeHtml(ev.id)+'" data-cat="'+cat+'" data-date="'+(ev.event_date ? new Date(ev.event_date).getTime() : '')+'" data-price="'+(lowestPrice === null ? '':lowestPrice)+'" data-search="'+escapeHtml([ev.title,ev.description,ev.location].join(" ")).toLowerCase()+'" role="button" tabindex="0" aria-label="View details for '+escapeHtml(ev.title)+'"><div class="poster">'+poster+'</div><div class="body"><h3>'+escapeHtml(ev.title)+'</h3><div class="meta">📅 '+escapeHtml(date)+'<br>📍 '+escapeHtml(ev.location || "Venue TBA")+'</div><div class="price">'+priceLabel+'</div><button class="primary event-view-button" type="button">EXPLORE EVENT →</button></div></article>';
+      return '<article class="card event-card" data-event-id="'+escapeHtml(ev.id)+'" data-cat="'+cat+'" data-date="'+(ev.event_date ? new Date(ev.event_date).getTime() : '')+'" data-price="'+(lowestPrice === null ? '':lowestPrice)+'" data-search="'+escapeHtml([ev.title,ev.description,ev.location].join(" ")).toLowerCase()+'" role="button" tabindex="0" aria-label="View details for '+escapeHtml(ev.title)+'" onclick="openEventDetails(this.dataset.eventId)"><div class="poster">'+poster+'</div><div class="body"><h3>'+escapeHtml(ev.title)+'</h3><div class="meta">📅 '+escapeHtml(date)+'<br>📍 '+escapeHtml(ev.location || "Venue TBA")+'</div><div class="price">'+priceLabel+'</div><button class="primary event-view-button" type="button">EXPLORE EVENT →</button></div></article>';
     }).join("");
     applyEventFilters();
     const requestedEvent = new URLSearchParams(window.location.search).get("event");
@@ -346,7 +346,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       else { window.prompt("Copy this event link:", url.toString()); }
     } catch (error) { if (error && error.name !== "AbortError") toast("Could not share the event right now."); }
   };
-  async function openEventDetails(eventId) {
+  window.openEventDetails = async function (eventId) {
     const ev = publishedEventDetails.get(String(eventId));
     if (!ev) return;
     currentEventForShare = ev;
