@@ -11,7 +11,7 @@
 header{position:sticky;top:0;z-index:40;height:70px;padding:0 5vw;display:flex;align-items:center;justify-content:space-between;background:#050505e8;backdrop-filter:blur(18px);border-bottom:1px solid #ffffff12}.brand{font-weight:950;letter-spacing:2px}.brand i{font-style:normal;color:var(--lime)}.nav{display:flex;align-items:center;gap:20px;color:#bbb;font-size:14px}.nav a:hover{color:#fff}.nav button{border:0;background:#fff;color:#000;padding:11px 17px;border-radius:999px;font-weight:900}
 .hero{min-height:76vh;padding:105px 6vw 75px;display:grid;place-items:center;text-align:center;position:relative;overflow:hidden;background:radial-gradient(circle at 50% 25%,#303030,#0b0b0b 42%,#050505 72%)}.hero:after{content:"";position:absolute;width:520px;height:520px;border:1px solid #fff1;border-radius:50%;box-shadow:0 0 0 90px #fff3,0 0 0 180px #fff2}.hero>*{position:relative;z-index:1}.kicker{font-size:11px;letter-spacing:4px;color:#888;font-weight:900;text-transform:uppercase}.hero h1{font-size:clamp(65px,15vw,155px);line-height:.8;letter-spacing:-8px;margin:25px 0;font-weight:1000}.hero h1 span{color:transparent;-webkit-text-stroke:1px #fff}.hero p{color:#aaa;max-width:650px;margin:0 auto 28px;line-height:1.7}.actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}.primary,.secondary{padding:13px 20px;border-radius:999px;font-weight:900}.primary{background:#fff;color:#000;border:0}.secondary{background:transparent;color:#fff;border:1px solid #444}
 section{padding:75px 6vw}.head{display:flex;justify-content:space-between;gap:25px;align-items:end;margin-bottom:28px}.head h2{font-size:clamp(38px,7vw,70px);line-height:.9;margin:8px 0;letter-spacing:-4px}.head p{color:#888;max-width:430px}.count{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;max-width:760px;margin:0 auto}.time{border:1px solid #292929;background:#101010;border-radius:18px;padding:18px;text-align:center}.num{display:block;font-size:clamp(34px,7vw,65px);font-weight:1000;letter-spacing:-3px}.lab{font-size:10px;color:#777;text-transform:uppercase;letter-spacing:2px}
-.filters{display:flex;gap:9px;overflow:auto;padding-bottom:10px;margin-bottom:20px}.filter{white-space:nowrap;border:1px solid #333;background:#0b0b0b;color:#bbb;padding:9px 14px;border-radius:999px}.filter.active{background:#fff;color:#000}
+.event-search{margin:0 0 16px}.event-search input{width:100%;max-width:520px;background:#101010;color:#fff;border:1px solid #333;border-radius:999px;padding:14px 18px;outline:none}.event-search input:focus{border-color:var(--lime)}.filters{display:flex;gap:9px;overflow:auto;padding-bottom:10px;margin-bottom:20px}.filter{white-space:nowrap;border:1px solid #333;background:#0b0b0b;color:#bbb;padding:9px 14px;border-radius:999px}.filter.active{background:#fff;color:#000}
 .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}.card{background:linear-gradient(145deg,#161616,#0b0b0b);border:1px solid #272727;border-radius:24px;overflow:hidden;transition:.2s}.card:hover{transform:translateY(-4px);border-color:#555}.poster{height:190px;display:grid;place-items:center;background:radial-gradient(circle,#303030,#090909);position:relative}.poster .mark{font-size:55px;font-weight:1000;letter-spacing:-4px;transform:rotate(-6deg)}.tag{position:absolute;top:14px;left:14px;background:#fff;color:#000;padding:6px 9px;border-radius:999px;font-size:10px;font-weight:950}.body{padding:19px}.body h3{margin:0 0 7px;font-size:22px}.meta{color:#999;font-size:13px;line-height:1.65}.price{font-size:22px;font-weight:950;margin:15px 0}.body button{width:100%}
 .trailer{max-width:900px;margin:auto;background:#0d0d0d;border:1px solid #292929;border-radius:24px;overflow:hidden}.video{display:block;width:100%;max-height:500px;background:#000}.trailer-info{padding:18px}.trailer-info h3{margin:0 0 5px}.trailer-info p{margin:0;color:#888;font-size:13px}
 .dashboard{background:#090909}.dash-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}.stat{border:1px solid #292929;background:#101010;border-radius:18px;padding:20px}.stat b{display:block;font-size:29px}.stat span{color:#777;font-size:11px;text-transform:uppercase;letter-spacing:1.5px}.dash-panel{border:1px solid #292929;border-radius:22px;background:#101010;padding:22px;overflow:auto}.dash-panel h3{margin-top:0}.table{width:100%;border-collapse:collapse;min-width:650px}.table th,.table td{text-align:left;padding:13px;border-bottom:1px solid #242424;font-size:13px}.table th{color:#777;text-transform:uppercase;font-size:10px;letter-spacing:1px}
@@ -49,12 +49,14 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 
 <section id="events">
   <div class="head"><div><div class="kicker">DISCOVER</div><h2>EVENTS.</h2></div><p>Music, parties, shows, sports and more. Pick a night and get moving.</p></div>
+  <div class="event-search"><input id="eventSearch" type="search" placeholder="Search events, venues or descriptions..." aria-label="Search events"></div>
   <div class="filters"><button class="filter active" onclick="filterEvents('all',this)">All</button><button class="filter" onclick="filterEvents('music',this)">Music</button><button class="filter" onclick="filterEvents('party',this)">Parties</button><button class="filter" onclick="filterEvents('sports',this)">Sports</button><button class="filter" onclick="filterEvents('other',this)">Other</button></div>
   <div class="grid" id="eventGrid">
     <article class="card" data-cat="party"><div class="poster"><span class="tag">TRENDING</span><div class="mark">ST★R</div></div><div class="body"><h3>STARGATES SUMMER RAVE</h3><div class="meta">📅 25 Sept 2026<br>📍 Nairobi • Venue TBA<br>🕘 8:00 PM — Late</div><div class="price">From KSh 500</div><button class="primary" onclick="openBuy('STARGATES SUMMER RAVE',500,800)">GET TICKETS</button></div></article>
     <article class="card" data-cat="music"><div class="poster"><span class="tag">MUSIC</span><div class="mark">LIVE</div></div><div class="body"><h3>ROOFTOP SESSIONS</h3><div class="meta">📅 10 Oct 2026<br>📍 Nairobi<br>🎧 Live DJs & guests</div><div class="price">From KSh 1,000</div><button class="primary" onclick="openBuy('ROOFTOP SESSIONS',1000,1500)">GET TICKETS</button></div></article>
     <article class="card" data-cat="sports"><div class="poster"><span class="tag">SPORTS</span><div class="mark">GAME</div></div><div class="body"><h3>THE BIG MATCH</h3><div class="meta">📅 3 Oct 2026<br>📍 Nairobi<br>🏟️ Stadium event</div><div class="price">From KSh 300</div><button class="primary" onclick="openBuy('THE BIG MATCH',300,600)">GET TICKETS</button></div></article>
   </div>
+  <p id="eventSearchEmpty" class="note" hidden>No events match that search. Try another name or venue.</p>
 </section>
 
 <section>
@@ -123,6 +125,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   const SUPABASE_KEY = "sb_publishable_Ek4yKvpVaoPuxw9AEl7BLA_na5weYfw";
   const sb = window.supabase?.createClient(SUPABASE_URL, SUPABASE_KEY);
   const state = { eventName: "", earlyPrice: 0, regularPrice: 0, earlyQty: 0, regularQty: 0 };
+  let selectedEventCategory = "all";
   let toastTimer;
 
   window.toast = function (message) {
@@ -276,6 +279,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       const priceLabel = lowestPrice === null ? "Price TBA" : "From KSh "+lowestPrice.toLocaleString("en-KE");
       return '<article class="card" data-cat="'+cat+'"><div class="poster"><div class="mark">ST★R</div></div><div class="body"><h3>'+escapeHtml(ev.title)+'</h3><div class="meta">📅 '+escapeHtml(date)+'<br>📍 '+escapeHtml(ev.location || "Venue TBA")+'</div><p>'+escapeHtml(ev.description || "")+'</p><div class="price">'+priceLabel+'</div>'+ticketSummary+'<button class="primary" disabled>Tickets opening soon</button></div></article>';
     }).join("");
+    applyEventFilters();
   }
   function updateAccountUI(user, role) {
     const authForm = $("authForm");
@@ -337,13 +341,26 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       "Verification is not connected yet. No ticket has been checked or admitted.";
   };
 
-  window.filterEvents = function (category, button) {
-    document.querySelectorAll("#eventGrid .card").forEach((card) => {
-      card.hidden = category !== "all" && card.dataset.cat !== category;
+  function applyEventFilters() {
+    const query = ($("eventSearch")?.value || "").trim().toLowerCase();
+    const cards = Array.from(document.querySelectorAll("#eventGrid .card"));
+    let visible = 0;
+    cards.forEach(card => {
+      const categoryMatch = selectedEventCategory === "all" || card.dataset.cat === selectedEventCategory;
+      const searchMatch = !query || (card.textContent || "").toLowerCase().includes(query);
+      card.hidden = !(categoryMatch && searchMatch);
+      if (!card.hidden) visible++;
     });
+    const empty = $("eventSearchEmpty");
+    if (empty) empty.hidden = cards.length === 0 || visible > 0;
+  }
+  window.filterEvents = function (category, button) {
+    selectedEventCategory = category;
     document.querySelectorAll(".filters .filter").forEach((el) =>
       el.classList.toggle("active", el === button));
+    applyEventFilters();
   };
+  $("eventSearch")?.addEventListener("input", applyEventFilters);
 
   window.openBuy = function (name, early, regular) {
     state.eventName = String(name || "Event");
