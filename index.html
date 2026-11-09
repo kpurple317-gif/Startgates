@@ -598,6 +598,23 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     toast("Thanks for reviewing this event!");await loadEventReviews(eventId,publishedEventDetails.get(String(eventId))?.event_date);
     const {data:stats}=await sb.from("event_review_stats").select("event_id,review_count,average_rating").eq("event_id",eventId).maybeSingle();if(stats)eventReviewStats.set(String(eventId),stats);
   };
+  window.loadOrganizerAnalytics=async function(){
+    const panel=$("organizerAnalytics");if(!panel||!sb)return;
+    panel.innerHTML='<p class="note">Loading your event engagement…</p>';
+    const {data:auth,error:authError}=await sb.auth.getUser();if(authError||!auth?.user){panel.innerHTML='<p class="note">Log in as an organizer to view analytics.</p>';return;}
+    const {data:events,error}=await sb.from("events").select("id,title,status").eq("organizer_id",auth.user.id).order("created_at",{ascending:false});
+    if(error){panel.innerHTML='<p class="note">Could not load your event analytics.</p>';return;}
+    if(!events?.length){panel.innerHTML='<p class="note">Your event analytics will appear here once you publish an event.</p>';return;}
+    const rows=await Promise.all(events.map(async ev=>{
+      const [views,saves,interested]=await Promise.all([
+        sb.from("event_views").select("id",{count:"exact",head:true}).eq("event_id",ev.id),
+        sb.from("saved_events").select("id",{count:"exact",head:true}).eq("event_id",ev.id),
+        sb.from("event_interest_counts").select("interest_count").eq("event_id",ev.id).maybeSingle()
+      ]);
+      return {title:ev.title,status:ev.status,views:views.count||0,saves:saves.count||0,interested:interested.data?.interest_count||0};
+    }));
+    panel.innerHTML=rows.map(r=>'<div class="dash-panel" style="margin:12px 0;padding:14px"><b>'+String(r.title||"Untitled event").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+'</b><div class="note">'+String(r.status).toUpperCase()+'</div><div class="event-social-stats"><span>◉ '+r.views+' views</span><span>♥ '+r.saves+' saves</span><span>✦ '+r.interested+' interested</span></div></div>').join("")+'<p class="note">These are real engagement counts. Verified ticket sales will appear when the live payment system is connected.</p>';
+  };
   function organizerLevelInfo(publishedCount, followerCount) {
     if (publishedCount >= 5 && followerCount >= 25) return {name:"HEADLINER",detail:"5+ published events and 25+ followers",className:"headliner"};
     if (publishedCount >= 3) return {name:"ESTABLISHED",detail:"3+ published events",className:"established"};
@@ -1564,6 +1581,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
         tab.classList.toggle("active", tab === button);
     });
     if(panelId==="organizerInbox")loadOrganizerInbox();
+    if(panelId==="eventsDash")loadOrganizerAnalytics();
     if(panelId==="adminSpotlight")loadSpotlightAdmin();
   };
 
