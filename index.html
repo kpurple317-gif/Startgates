@@ -587,8 +587,9 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   window.loadEventReviews=async function(eventId,eventDate){
     const summary=$("eventReviewSummary"),list=$("eventReviewList"),form=$("eventReviewFormArea");if(!summary||!list||!form)return;
     const stats=eventReviewStats.get(String(eventId));summary.textContent=stats?("★ "+Number(stats.average_rating).toFixed(1)+" / 5 · "+stats.review_count+" reviews"):"No reviews yet.";
-    const {data:reviews,error}=await sb.from("event_public_reviews").select("rating,review_text,created_at").eq("event_id",eventId).order("created_at",{ascending:false}).limit(8);
-    if(!error&&reviews?.length)list.innerHTML=reviews.map(r=>'<div class="meta" style="padding:8px 0;border-top:1px solid #333">★ '+Number(r.rating)+'/5 · '+String(r.review_text||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+'</div>').join("");
+    const {data:auth}=await sb.auth.getUser();
+    if(auth?.user){const {data:own}=await sb.from("event_reviews").select("rating,review_text").eq("event_id",eventId).eq("user_id",auth.user.id).maybeSingle();if(own)list.innerHTML='<div class="meta" style="padding:8px 0;border-top:1px solid #333">YOUR REVIEW · ★ '+Number(own.rating)+'/5 · '+String(own.review_text||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+'</div>';}
+    if(!stats?.review_count)list.innerHTML='<p class="note">Be the first to rate this event after it takes place.</p>';
     const ended=eventDate&&new Date(eventDate).getTime()<Date.now();
     form.innerHTML=ended?'<label class="note">Rate this event</label><select id="eventReviewRating"><option value="5">★★★★★ — Loved it</option><option value="4">★★★★ — Great</option><option value="3">★★★ — Good</option><option value="2">★★ — Could be better</option><option value="1">★ — Disappointing</option></select><textarea id="eventReviewText" maxlength="1200" placeholder="Share your experience (optional)"></textarea><button class="primary" type="button" onclick="submitEventReview(\''+String(eventId)+'\')">SUBMIT REVIEW</button>':'<p class="note">Reviews open after the event has taken place.</p>';
   };
@@ -610,10 +611,10 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const rows=await Promise.all(events.map(async ev=>{
       const [views,saves,interested]=await Promise.all([
         sb.from("event_views").select("id",{count:"exact",head:true}).eq("event_id",ev.id),
-        sb.from("saved_events").select("id",{count:"exact",head:true}).eq("event_id",ev.id),
+        sb.from("event_save_counts").select("save_count").eq("event_id",ev.id).maybeSingle(),
         sb.from("event_interest_counts").select("interest_count").eq("event_id",ev.id).maybeSingle()
       ]);
-      return {title:ev.title,status:ev.status,views:views.count||0,saves:saves.count||0,interested:interested.data?.interest_count||0};
+      return {title:ev.title,status:ev.status,views:views.count||0,saves:saves.data?.save_count||0,interested:interested.data?.interest_count||0};
     }));
     panel.innerHTML=rows.map(r=>'<div class="dash-panel" style="margin:12px 0;padding:14px"><b>'+String(r.title||"Untitled event").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+'</b><div class="note">'+String(r.status).toUpperCase()+'</div><div class="event-social-stats"><span>◉ '+r.views+' views</span><span>♥ '+r.saves+' saves</span><span>✦ '+r.interested+' interested</span></div></div>').join("")+'<p class="note">These are real engagement counts. Verified ticket sales will appear when the live payment system is connected.</p>';
   };
