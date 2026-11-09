@@ -505,7 +505,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   let inboxChannel=null,inboxUser=null;
   function subscribeInbox(userId){
     if(inboxUser===userId)return;if(inboxChannel)sb.removeChannel(inboxChannel);inboxUser=userId;
-    inboxChannel=sb.channel("organizer-inbox-"+userId).on("postgres_changes",{event:"INSERT",schema:"public",table:"notifications",filter:"recipient_id=eq."+userId},async(payload)=>{const n=payload.new||{};refreshInboxBadge();if($("organizerInbox")?.style.display==="block")loadOrganizerInbox();window.toast((n.title||"New StarGates notification")+" — "+(n.body||"Open your Inbox to view it."));try{const {error}=await sb.functions.invoke("notify-organizer-decision",{body:{kind:"notification",id:n.id}});if(error)console.warn("Organizer email alert was not sent:",error.message);}catch(emailError){console.warn("Organizer email alert failed:",emailError);}}).subscribe();
+    inboxChannel=sb.channel("organizer-inbox-"+userId).on("postgres_changes",{event:"INSERT",schema:"public",table:"notifications",filter:"recipient_id=eq."+userId},(payload)=>{const n=payload.new||{};refreshInboxBadge();if($("organizerInbox")?.style.display==="block")loadOrganizerInbox();window.toast((n.title||"New StarGates notification")+" — "+(n.body||"Open your Inbox to view it."));}).subscribe();
   }
   async function loadDashboard() {
     if (!sb) return;
