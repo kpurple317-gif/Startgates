@@ -444,6 +444,14 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     } catch (error) { if (error && error.name !== "AbortError") toast("Could not share the event right now."); }
   };
 
+
+  function validateEventGalleryFiles(files) {
+    if (files.length > 8) return "Choose no more than 8 gallery photos at a time.";
+    const invalid = files.findIndex(file => !["image/jpeg","image/png","image/webp","image/gif"].includes(file.type) || file.size > 10*1024*1024);
+    if (invalid >= 0) return "Gallery photo "+(invalid+1)+" must be JPG, PNG, WebP or GIF and no larger than 10 MB.";
+    return null;
+  }
+
   async function uploadEventGalleryFiles(eventId,userId,files) {
     if (!files || !files.length) return 0;
     if (files.length > 8) throw new Error("Choose no more than 8 gallery photos at a time.");
@@ -873,6 +881,8 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if(eventSubmitInProgress)return toast("Please wait for the current save to finish.");
     const button=$("orgSubmitButton"),name=$("orgName")?.value.trim()||"",date=$("orgDate")?.value||"",venue=$("orgVenue")?.value.trim()||"";
     if(!name||!date||!venue)return toast("Enter the event name, date and venue.");
+    const galleryFiles=Array.from($("orgGallery")?.files||[]),galleryValidation=validateEventGalleryFiles(galleryFiles);
+    if(galleryValidation)return toast(galleryValidation);
     eventSubmitInProgress=true;setButtonBusy(button,true,"SAVING CHANGES...");
     try{
       const {data:auth,error:authError}=await sb.auth.getUser();if(authError||!auth.user)throw new Error("Please log in again.");
@@ -885,7 +895,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       if(cover)patch.image_url=cover;if(video)patch.trailer_url=video;else if($("orgTrailer")?.value.trim())patch.trailer_url=$("orgTrailer").value.trim();
       if(current.status==="published")patch.status="draft";
       const {error:updateError}=await sb.from("events").update(patch).eq("id",editingEventId).eq("organizer_id",auth.user.id);if(updateError)throw updateError;
-      const galleryAdded=await uploadEventGalleryFiles(editingEventId,auth.user.id,Array.from($("orgGallery")?.files||[]));
+      const galleryAdded=await uploadEventGalleryFiles(editingEventId,auth.user.id,galleryFiles);
       const rows=Array.from(document.querySelectorAll("#ticketTypeRows .ticket-type-row"));
       if(!rows.length)throw new Error("Add at least one ticket type.");
       for(let index=0;index<rows.length;index++){
@@ -929,6 +939,9 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     );
     if (invalidTicketIndex !== -1)
       return toast("Ticket type " + (invalidTicketIndex + 1) + " needs a name, valid price and quantity of at least 1.");
+    const galleryFiles = Array.from($("orgGallery")?.files || []);
+    const galleryValidation = validateEventGalleryFiles(galleryFiles);
+    if (galleryValidation) return toast(galleryValidation);
     if (!Number.isFinite(commission) || commission < 0 || commission > 100)
       return toast("Platform commission must be between 0 and 100%.");
 
@@ -1004,7 +1017,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
         }
         const { error: ticketError } = await sb.from("ticket_types").insert(rows);
         if (ticketError) throw ticketError;
-        await uploadEventGalleryFiles(event.id,userData.user.id,Array.from($("orgGallery")?.files||[]));
+        await uploadEventGalleryFiles(event.id,userData.user.id,galleryFiles);
       } catch (mediaError) {
         return toast("Event draft was saved, but media or ticket setup failed: "+mediaError.message+". Contact admin before submitting it again.");
       }
