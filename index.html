@@ -87,10 +87,10 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   <div class="head"><div><div class="kicker">PLATFORM OWNER</div><h2>CONTROL ROOM.</h2></div><p>See what is happening across the marketplace: events, buyers, sales and your commission.</p></div>
   <div class="dash-grid"><div class="stat"><b id="activeEvents">0</b><span>Active events</span></div><div class="stat"><b id="ticketsSold">0</b><span>Tickets sold</span></div><div class="stat"><b id="customerCount">0</b><span>Registered users</span></div><div class="stat"><b id="commission">KSh 0</b><span>Commission earned</span></div></div>
   <div class="dash-panel">
-    <div class="tabs"><button class="tab active" onclick="showDash('sales',this)">Sales</button><button class="tab" onclick="showDash('eventsDash',this)">My Events</button><button class="tab" onclick="showDash('payouts',this)">Payouts</button><button class="tab" id="adminReviewTab" style="display:none" onclick="showDash('adminReview',this)">EVENT REVIEW</button><button class="tab" id="adminModerationTab" style="display:none" onclick="showDash('adminModeration',this)">EVENT MODERATION</button><button class="tab" id="adminApplicationsTab" style="display:none" onclick="showDash('adminApplications',this)">ORGANIZER APPLICATIONS</button><button class="tab" id="adminUsersTab" style="display:none" onclick="showDash('adminUsers',this)">USER MANAGEMENT</button><button class="tab" onclick="openVerify()">VERIFY TICKET</button></div>
+    <div class="tabs"><button class="tab active" onclick="showDash('sales',this)">Sales</button><button class="tab" onclick="showDash('eventsDash',this)">My Events</button><button class="tab" onclick="showDash('payouts',this)">Payouts</button><button class="tab" id="organizerInboxTab" style="display:none" onclick="showDash('organizerInbox',this)">INBOX <span id="inboxUnreadBadge" style="display:none">0</span></button><button class="tab" id="adminReviewTab" style="display:none" onclick="showDash('adminReview',this)">EVENT REVIEW</button><button class="tab" id="adminModerationTab" style="display:none" onclick="showDash('adminModeration',this)">EVENT MODERATION</button><button class="tab" id="adminApplicationsTab" style="display:none" onclick="showDash('adminApplications',this)">ORGANIZER APPLICATIONS</button><button class="tab" id="adminUsersTab" style="display:none" onclick="showDash('adminUsers',this)">USER MANAGEMENT</button><button class="tab" onclick="openVerify()">VERIFY TICKET</button></div>
     <div id="sales"><h3>Recent event sales</h3><table class="table"><thead><tr><th>Event</th><th>Organizer</th><th>Tickets</th><th>Gross</th><th>Commission</th></tr></thead><tbody><tr><td colspan="5">No verified sales yet. Sales will appear after real payments are connected.</td></tr></tbody></table></div>
     <div id="eventsDash" style="display:none"><h3>Events you manage</h3><p class="note">No organizer events are connected yet.</p></div>
-    <div id="payouts" style="display:none"><h3>Payouts</h3><p class="note">Payouts will appear after real payments and settlement are connected.</p></div>
+    <div id="payouts" style="display:none"><h3>Payouts</h3><p class="note">Payouts will appear after real payments and settlement are connected.</p></div><div id="organizerInbox" style="display:none"><h3>Organizer Inbox</h3><p class="note">Followers, event decisions and StarGates updates.</p><button class="secondary" onclick="markAllNotificationsRead()">MARK ALL READ</button><div id="organizerInboxList"><p class="note">Your notifications will appear here.</p></div></div>
     <div id="adminReview" style="display:none"><h3>Event submissions</h3><div id="adminReviewList"><p class="note">Admin access required.</p></div></div>
     <div id="adminModeration" style="display:none"><h3>Published & restricted events</h3><p class="note">Unpublish removes an event from public listings. Ban blocks republishing until an admin unbans it.</p><div id="adminModerationList"><p class="note">Admin access required.</p></div></div>
     <div id="adminApplications" style="display:none"><h3>Organizer applications</h3><div id="adminApplicationsList"><p class="note">Admin access required.</p></div></div>
@@ -478,6 +478,35 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if ($("signedInEmail")) $("signedInEmail").textContent = user ? "Signed in as " + user.email : "";
     if ($("signedInRole")) $("signedInRole").textContent = user ? "Account role: " + (role || "customer") : "";
   }
+  async function refreshInboxBadge(){
+    const {data:auth}=await sb.auth.getUser(),badge=$("inboxUnreadBadge");if(!auth?.user||!badge)return;
+    const {count,error}=await sb.from("notifications").select("id",{count:"exact",head:true}).eq("recipient_id",auth.user.id).is("read_at",null);
+    if(error){badge.style.display="none";return;}badge.textContent=count>99?"99+":String(count||0);badge.style.display=count?"inline-block":"none";
+  }
+  const inboxSafe=v=>String(v??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  async function loadOrganizerInbox(){
+    const list=$("organizerInboxList");if(!list||!sb)return;const {data:auth}=await sb.auth.getUser();if(!auth?.user)return;
+    const {data,error}=await sb.from("notifications").select("id,type,title,body,created_at,read_at").eq("recipient_id",auth.user.id).order("created_at",{ascending:false}).limit(50);
+    if(error){list.textContent="Could not load your inbox.";return;}
+    if(!data?.length){list.innerHTML="<p class='note'>You are all caught up. New followers and event updates will appear here.</p>";await refreshInboxBadge();return;}
+    list.innerHTML=data.map(n=>"<div class='ticket' style='display:block;background:"+(n.read_at?"#0b0b0b":"#171b10")+"'><b>"+inboxSafe(n.title)+"</b><p class='note'>"+inboxSafe(n.body)+"</p><small>"+inboxSafe(new Date(n.created_at).toLocaleString())+(n.read_at?" · READ":" · NEW")+"</small>"+(n.read_at?"":" <button class='secondary' onclick='markNotificationRead("+JSON.stringify(n.id)+",this)'>MARK READ</button>")+"</div>").join("");
+    await refreshInboxBadge();
+  }
+  window.markNotificationRead=async function(id,button){
+    const {data:auth}=await sb.auth.getUser();if(!auth?.user)return;if(button){button.disabled=true;button.textContent="SAVING…";}
+    const {error}=await sb.from("notifications").update({read_at:new Date().toISOString()}).eq("id",id).eq("recipient_id",auth.user.id).is("read_at",null);
+    if(error){if(button)button.disabled=false;return toast("Could not mark as read.");}await Promise.all([loadOrganizerInbox(),refreshInboxBadge()]);
+  };
+  window.markAllNotificationsRead=async function(){
+    const {data:auth}=await sb.auth.getUser();if(!auth?.user)return;
+    const {error}=await sb.from("notifications").update({read_at:new Date().toISOString()}).eq("recipient_id",auth.user.id).is("read_at",null);
+    if(error)return toast("Could not update inbox.");await Promise.all([loadOrganizerInbox(),refreshInboxBadge()]);toast("Inbox marked as read.");
+  };
+  let inboxChannel=null,inboxUser=null;
+  function subscribeInbox(userId){
+    if(inboxUser===userId)return;if(inboxChannel)sb.removeChannel(inboxChannel);inboxUser=userId;
+    inboxChannel=sb.channel("organizer-inbox-"+userId).on("postgres_changes",{event:"INSERT",schema:"public",table:"notifications",filter:"recipient_id=eq."+userId},()=>{refreshInboxBadge();if($("organizerInbox")?.style.display==="block")loadOrganizerInbox();}).subscribe();
+  }
   async function loadDashboard() {
     if (!sb) return;
     const { data: auth } = await sb.auth.getUser();
@@ -492,6 +521,9 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     }
     const { data: profile } = await sb.from("profiles").select("role").eq("id",auth.user.id).maybeSingle();
     const isAdmin = profile?.role === "admin";
+    const inboxTab=$("organizerInboxTab"),canUseInbox=["organizer","admin"].includes(profile?.role);
+    if(inboxTab)inboxTab.style.display=canUseInbox?"inline-flex":"none";
+    if(canUseInbox){subscribeInbox(auth.user.id);await refreshInboxBadge();}
     updateAccountUI(auth.user, profile?.role);
     if (adminTab) adminTab.style.display = isAdmin ? "inline-flex" : "none";
     const applicationsTab = $("adminApplicationsTab");
@@ -973,7 +1005,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   };
 
   window.showDash = function (panelId, button) {
-    ["sales", "eventsDash", "payouts", "adminReview", "adminModeration", "adminApplications", "adminUsers"].forEach((id) => {
+    ["sales", "eventsDash", "payouts", "organizerInbox", "adminReview", "adminModeration", "adminApplications", "adminUsers"].forEach((id) => {
       const panel = $(id);
       if (panel) panel.style.display = id === panelId ? "block" : "none";
     });
@@ -981,6 +1013,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       if (tab.getAttribute("onclick")?.startsWith("showDash"))
         tab.classList.toggle("active", tab === button);
     });
+    if(panelId==="organizerInbox")loadOrganizerInbox();
   };
 
   document.addEventListener("keydown", (event) => {
