@@ -103,7 +103,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 .sg-map-popup small{display:inline-block;color:#c7ff4a;margin-top:5px;font-weight:800}
 .sg-map-popup a{display:inline-block;margin-top:10px;color:#c7ff4a;font-size:10px;font-weight:900;letter-spacing:1px}
 .sg-map-popup button{display:block;width:100%;margin-top:9px;padding:10px 13px;border:0;border-radius:999px;background:var(--lime);color:#10130b;font-size:10px;font-weight:950;letter-spacing:1px}
-.event-distance{display:inline-flex;margin-top:8px;padding:5px 9px;border:1px solid #4c5d32;border-radius:999px;color:var(--lime);font-size:10px;font-weight:800;letter-spacing:.3px}
+ .event-action-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.event-action-row button{flex:1;min-width:0;padding:9px 8px;font-size:10px}.event-flash-badge{display:inline-flex;margin:7px 0 0;padding:5px 9px;border-radius:999px;background:#ff5c3d;color:#fff;font-size:10px;font-weight:950;letter-spacing:.8px}.event-social-stats{display:flex;gap:12px;flex-wrap:wrap;margin-top:8px;color:#b9c1ae;font-size:10px}.event-review-box{margin-top:18px;padding:14px;border:1px solid #3b4a2b;border-radius:14px;background:#0c100a}.event-review-box textarea{width:100%;min-height:74px;margin:8px 0;padding:10px;background:#080a08;color:#fff;border:1px solid #39432f;border-radius:10px}.event-review-box select{padding:8px;background:#10150d;color:#fff;border:1px solid #52643c;border-radius:8px}.event-distance{display:inline-flex;margin-top:8px;padding:5px 9px;border:1px solid #4c5d32;border-radius:999px;color:var(--lime);font-size:10px;font-weight:800;letter-spacing:.3px}
 .sg-map-pin{background:linear-gradient(145deg,#e4ff9a,#a5e52d);border:3px solid #10150d;border-radius:50% 50% 50% 8%;box-shadow:0 0 0 4px #c7ff4a35,0 5px 18px #000c;transform:rotate(-45deg)}
 .sg-map-pin span{display:grid;place-items:center;height:100%;transform:rotate(45deg);font-size:15px;font-weight:1000;color:#10130b;text-shadow:0 1px #fff8}
 .event-pin-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px}.event-pin-controls .note{margin:0}
@@ -152,8 +152,8 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 
 <section id="events">
   <div class="head"><div><div class="kicker">DISCOVER</div><h2>EVENTS.</h2></div><p>Music, parties, shows, sports and more. Pick a night and get moving.</p></div>
-  <div class="discovery-tools"><div class="event-search"><input id="eventSearch" type="search" placeholder="Search events, venues or descriptions..." aria-label="Search events"></div><label class="sort-control">SORT BY <select id="eventSort" aria-label="Sort events"><option value="soonest">Soonest</option><option value="price-low">Lowest price</option><option value="price-high">Highest price</option><option value="nearest" disabled>Nearest</option></select></label><div class="nearby-actions"><button class="secondary" type="button" onclick="findEventsNearMe()">⌖ EVENTS NEAR ME</button><button class="secondary" id="nearbyMapToggle" type="button" onclick="toggleNearbyMap()">VIEW MAP</button></div><label class="sort-control">WITHIN <select id="nearbyRadius" aria-label="Filter by distance" disabled><option value="0">Any distance</option><option value="5">5 km</option><option value="10">10 km</option><option value="25">25 km</option><option value="50">50 km</option></select></label></div>
-  <div class="filters"><button class="filter active" onclick="filterEvents('all',this)">All</button><button class="filter" onclick="filterEvents('music',this)">Music</button><button class="filter" onclick="filterEvents('parties',this)">Parties</button><button class="filter" onclick="filterEvents('sports',this)">Sports</button><button class="filter" onclick="filterEvents('other',this)">Other</button></div>
+  <div class="discovery-tools"><div class="event-search"><input id="eventSearch" type="search" placeholder="Search events, venues or descriptions..." aria-label="Search events"></div><label class="sort-control">SORT BY <select id="eventSort" aria-label="Sort events"><option value="soonest">Soonest</option><option value="price-low">Lowest price</option><option value="price-high">Highest price</option><option value="trending">Trending</option><option value="nearest" disabled>Nearest</option></select></label><div class="nearby-actions"><button class="secondary" type="button" onclick="findEventsNearMe()">⌖ EVENTS NEAR ME</button><button class="secondary" id="nearbyMapToggle" type="button" onclick="toggleNearbyMap()">VIEW MAP</button></div><label class="sort-control">WITHIN <select id="nearbyRadius" aria-label="Filter by distance" disabled><option value="0">Any distance</option><option value="5">5 km</option><option value="10">10 km</option><option value="25">25 km</option><option value="50">50 km</option></select></label></div>
+  <div class="filters"><button class="filter active" onclick="filterEvents('all',this)">All</button><button class="filter" id="savedEventsToggle" onclick="toggleSavedEvents(this)">♥ SAVED</button><button class="filter" onclick="filterEvents('music',this)">Music</button><button class="filter" onclick="filterEvents('parties',this)">Parties</button><button class="filter" onclick="filterEvents('sports',this)">Sports</button><button class="filter" onclick="filterEvents('other',this)">Other</button></div>
   <div class="nearby-map-panel" id="nearbyMapPanel" hidden><div class="nearby-map-heading"><b>✦ EXPLORE EVENT LOCATIONS</b><span class="note">LIVE PINS</span></div><p class="nearby-map-status" id="nearbyMapStatus">Map pins appear when organisers add an exact venue location. Your location is only requested when you tap Events Near Me.</p><div id="nearbyEventsMap" role="region" aria-label="Map of published event locations"></div><p class="map-attribution-note">Map data © OpenStreetMap contributors. Distances are straight-line estimates, not driving distances.</p></div>
   <div class="grid" id="eventGrid" aria-live="polite">
     <div class="event-loading"><span class="loading-orbit"></span><b>Finding your next experience</b><small>Loading published events…</small></div>
@@ -171,7 +171,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   <div class="dash-panel">
     <div class="tabs"><button class="tab active" onclick="showDash('sales',this)">Sales</button><button class="tab" onclick="showDash('eventsDash',this)">My Events</button><button class="tab" onclick="showDash('payouts',this)">Payouts</button><button class="tab" id="organizerInboxTab" style="display:none" onclick="showDash('organizerInbox',this)"><span class="inbox-bell">♢ INBOX <span id="inboxUnreadBadge" style="display:none">0</span></span></button><button class="tab" id="adminSpotlightTab" style="display:none" onclick="showDash('adminSpotlight',this)">SPOTLIGHT ✦</button><button class="tab" id="adminReviewTab" style="display:none" onclick="showDash('adminReview',this)">EVENT REVIEW</button><button class="tab" id="adminModerationTab" style="display:none" onclick="showDash('adminModeration',this)">EVENT MODERATION</button><button class="tab" id="adminApplicationsTab" style="display:none" onclick="showDash('adminApplications',this)">ORGANIZER APPLICATIONS</button><button class="tab" id="adminUsersTab" style="display:none" onclick="showDash('adminUsers',this)">USER MANAGEMENT</button><button class="tab" onclick="openVerify()">VERIFY TICKET</button></div>
     <div id="sales"><h3>Recent event sales</h3><table class="table"><thead><tr><th>Event</th><th>Organizer</th><th>Tickets</th><th>Gross</th><th>Commission</th></tr></thead><tbody><tr><td colspan="5">No verified sales yet. Sales will appear after real payments are connected.</td></tr></tbody></table></div>
-    <div id="eventsDash" style="display:none"><h3>Events you manage</h3><p class="note">No organizer events are connected yet.</p></div>
+    <div id="eventsDash" style="display:none"><h3>Events you manage</h3><p class="note">Real engagement for your events.</p><div id="organizerAnalytics"><p class="note">Analytics load when you open this tab.</p></div></div>
     <div id="payouts" style="display:none"><h3>Payouts</h3><p class="note">Payouts will appear after real payments and settlement are connected.</p></div><div id="organizerInbox" style="display:none"><div class="inbox-heading"><div><div class="kicker">YOUR UPDATES</div><h3>Notifications</h3><p class="inbox-intro">Everything happening around your organizer account, in one place.</p></div><button class="secondary" onclick="markAllNotificationsRead()">MARK ALL READ</button></div><div id="organizerInboxList"><div class="inbox-empty">♢<strong>You&#39;re all caught up</strong>New followers and event updates will show here.</div></div></div>
     <div id="adminSpotlight" style="display:none"><div class="kicker">HOMEPAGE FEATURE</div><h3>Spotlight event</h3><p class="note">Choose one published event to feature on the homepage. Only real published events can be selected.</p><div id="adminSpotlightContent"><p class="note">Loading spotlight controls…</p></div></div>
     <div id="adminReview" style="display:none"><h3>Event submissions</h3><div id="adminReviewList"><p class="note">Admin access required.</p></div></div>
@@ -232,6 +232,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   const state = { eventName: "", earlyPrice: 0, regularPrice: 0, earlyQty: 0, regularQty: 0 };
   let selectedEventCategory = "all";
   let publishedEventDetails = new Map();
+  let savedEventIds = new Set(), eventInterestCounts = new Map(), eventSaveCounts = new Map(), eventReviewStats = new Map(), savedOnly = false;
   let customerEventMap = null, customerEventMarkers = null, organizerPinMap = null, organizerPinMarker = null, customerCoordinates = null;
   let toastTimer;
   let eventSubmitInProgress = false;
@@ -825,6 +826,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       const bp = b.dataset.price === "" ? Number.MAX_SAFE_INTEGER : Number(b.dataset.price);
       if (sort === "price-low") return ap - bp || ad - bd;
       if (sort === "price-high") return bp - ap || ad - bd;
+      if (sort === "trending") return (Number(b.dataset.trending)||0)-(Number(a.dataset.trending)||0)||ad-bd;
       if(sort==="nearest"){const ax=a.dataset.distance===""?Number.MAX_SAFE_INTEGER:Number(a.dataset.distance),bx=b.dataset.distance===""?Number.MAX_SAFE_INTEGER:Number(b.dataset.distance);return ax-bx||ad-bd;}
       return ad - bd;
     });
@@ -832,10 +834,11 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     let visible = 0;
     cards.forEach(card => {
       const categoryMatch = selectedEventCategory === "all" || card.dataset.cat === selectedEventCategory;
+      const savedMatch = !savedOnly || savedEventIds.has(String(card.dataset.eventId));
       const searchMatch = !query || (card.dataset.search || card.textContent || "").includes(query);
       const radius=Number($("nearbyRadius")?.value||0);
       const distanceMatch=!radius||(customerCoordinates&&card.dataset.distance!==""&&Number(card.dataset.distance)<=radius);
-      card.hidden = !(categoryMatch && searchMatch && distanceMatch);
+      card.hidden = !(categoryMatch && searchMatch && distanceMatch && savedMatch);
       if (!card.hidden) visible++;
     });
     const empty = $("eventSearchEmpty");
