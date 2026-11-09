@@ -87,11 +87,12 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   <div class="head"><div><div class="kicker">PLATFORM OWNER</div><h2>CONTROL ROOM.</h2></div><p>See what is happening across the marketplace: events, buyers, sales and your commission.</p></div>
   <div class="dash-grid"><div class="stat"><b id="activeEvents">0</b><span>Active events</span></div><div class="stat"><b id="ticketsSold">0</b><span>Tickets sold</span></div><div class="stat"><b id="customerCount">0</b><span>Registered users</span></div><div class="stat"><b id="commission">KSh 0</b><span>Commission earned</span></div></div>
   <div class="dash-panel">
-    <div class="tabs"><button class="tab active" onclick="showDash('sales',this)">Sales</button><button class="tab" onclick="showDash('eventsDash',this)">My Events</button><button class="tab" onclick="showDash('payouts',this)">Payouts</button><button class="tab" id="adminReviewTab" style="display:none" onclick="showDash('adminReview',this)">EVENT REVIEW</button><button class="tab" id="adminApplicationsTab" style="display:none" onclick="showDash('adminApplications',this)">ORGANIZER APPLICATIONS</button><button class="tab" id="adminUsersTab" style="display:none" onclick="showDash('adminUsers',this)">USER MANAGEMENT</button><button class="tab" onclick="openVerify()">VERIFY TICKET</button></div>
+    <div class="tabs"><button class="tab active" onclick="showDash('sales',this)">Sales</button><button class="tab" onclick="showDash('eventsDash',this)">My Events</button><button class="tab" onclick="showDash('payouts',this)">Payouts</button><button class="tab" id="adminReviewTab" style="display:none" onclick="showDash('adminReview',this)">EVENT REVIEW</button><button class="tab" id="adminModerationTab" style="display:none" onclick="showDash('adminModeration',this)">EVENT MODERATION</button><button class="tab" id="adminApplicationsTab" style="display:none" onclick="showDash('adminApplications',this)">ORGANIZER APPLICATIONS</button><button class="tab" id="adminUsersTab" style="display:none" onclick="showDash('adminUsers',this)">USER MANAGEMENT</button><button class="tab" onclick="openVerify()">VERIFY TICKET</button></div>
     <div id="sales"><h3>Recent event sales</h3><table class="table"><thead><tr><th>Event</th><th>Organizer</th><th>Tickets</th><th>Gross</th><th>Commission</th></tr></thead><tbody><tr><td colspan="5">No verified sales yet. Sales will appear after real payments are connected.</td></tr></tbody></table></div>
     <div id="eventsDash" style="display:none"><h3>Events you manage</h3><p class="note">No organizer events are connected yet.</p></div>
     <div id="payouts" style="display:none"><h3>Payouts</h3><p class="note">Payouts will appear after real payments and settlement are connected.</p></div>
     <div id="adminReview" style="display:none"><h3>Event submissions</h3><div id="adminReviewList"><p class="note">Admin access required.</p></div></div>
+    <div id="adminModeration" style="display:none"><h3>Published & restricted events</h3><p class="note">Unpublish removes an event from public listings. Ban blocks republishing until an admin unbans it.</p><div id="adminModerationList"><p class="note">Admin access required.</p></div></div>
     <div id="adminApplications" style="display:none"><h3>Organizer applications</h3><div id="adminApplicationsList"><p class="note">Admin access required.</p></div></div>
     <div id="adminUsers" style="display:none"><h3>Registered users</h3><p class="note">Account directory. Role changes and suspensions will be added with server-side safeguards.</p><div id="adminUsersList"><p class="note">Admin access required.</p></div></div>
   </div>
@@ -497,8 +498,10 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (applicationsTab) applicationsTab.style.display = isAdmin ? "inline-flex" : "none";
     const usersTab = $("adminUsersTab");
     if (usersTab) usersTab.style.display = isAdmin ? "inline-flex" : "none";
+    const moderationTab = $("adminModerationTab");
+    if (moderationTab) moderationTab.style.display = isAdmin ? "inline-flex" : "none";
     if (isAdmin) {
-      await Promise.all([loadAdminEventReviews(), loadAdminApplications(), loadAdminUsers()]);
+      await Promise.all([loadAdminEventReviews(), loadAdminModeration(), loadAdminApplications(), loadAdminUsers()]);
     }
     const { data: events, error } = await sb.from("events")
       .select("id,title,status,event_date,location,ticket_types(name,price,quantity)")
@@ -765,6 +768,57 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   }
 
 
+  async function loadAdminModeration() {
+    const list = $("adminModerationList");
+    if (!list || !sb) return;
+    const { data, error } = await sb.from("events")
+      .select("id,title,organizer_id,status,is_banned,event_date,location")
+      .order("created_at",{ascending:false}).limit(150);
+    if (error) { list.innerHTML = "<p class='note'>Could not load events for moderation: "+String(error.message).replace(/[&<>"]/g,"")+"</p>"; return; }
+    if (!data?.length) { list.innerHTML = "<p class='note'>No events found.</p>"; return; }
+    const safe = value => String(value ?? "").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+    list.innerHTML = data.map(ev => {
+      const state = ev.is_banned || ev.status === "banned" ? "BANNED" : ev.status === "published" ? "PUBLISHED" : ev.status.toUpperCase();
+      const actions = ev.is_banned || ev.status === "banned"
+        ? "<button class='primary' onclick='moderateEvent("+JSON.stringify(ev.id)+",\"unban\",this)'>UNBAN</button>"
+        : ev.status === "published"
+          ? "<button class='secondary' onclick='moderateEvent("+JSON.stringify(ev.id)+",\"unpublish\",this)'>UNPUBLISH</button><button class='secondary' onclick='moderateEvent("+JSON.stringify(ev.id)+",\"ban\",this)'>BAN EVENT</button>"
+          : "<button class='secondary' onclick='moderateEvent("+JSON.stringify(ev.id)+",\"ban\",this)'>BAN EVENT</button>";
+      return "<div class='ticket' style='display:block;margin:10px 0'><b>"+safe(ev.title)+"</b><small style='display:block'>"+safe(state)+" · "+safe(ev.location||"Venue TBA")+" · "+safe(ev.event_date?new Date(ev.event_date).toLocaleDateString():"Date TBA")+"</small><div style='display:flex;gap:8px;flex-wrap:wrap;margin-top:10px'>"+actions+"</div></div>";
+    }).join("");
+  }
+
+  window.moderateEvent = async function(eventId, action, button) {
+    if (!sb || !eventId || !["unpublish","ban","unban"].includes(action)) return;
+    const lockKey = "moderate:"+eventId;
+    if (actionLocks.has(lockKey)) return toast("This event is already being processed.");
+    const prompts = {unpublish:"Unpublish this event? It will disappear from public listings but its data will be kept.",ban:"BAN this event? It will be removed from public listings and organizers will not be able to republish it.",unban:"Unban this event? It will remain unpublished until an admin approves it again."};
+    if (!confirm(prompts[action])) return;
+    actionLocks.add(lockKey);
+    setButtonBusy(button,true,action==="unpublish"?"UNPUBLISHING...":action==="ban"?"BANNING...":"UNBANNING...");
+    try {
+      const {data:auth,error:authError}=await sb.auth.getUser();
+      if(authError||!auth.user) return toast("Log in as the platform admin first.");
+      const {data:profile,error:profileError}=await sb.from("profiles").select("role").eq("id",auth.user.id).maybeSingle();
+      if(profileError||profile?.role!=="admin") return toast("Only platform admins can moderate events.");
+      let update = {};
+      if(action==="unpublish") update={status:"draft"};
+      if(action==="ban") update={status:"banned",is_banned:true};
+      if(action==="unban") update={status:"draft",is_banned:false};
+      const {data,error}=await sb.from("events").update(update).eq("id",eventId).select("id,status,is_banned").maybeSingle();
+      if(error) return toast("Could not update event: "+error.message);
+      if(!data) return toast("Event not found or moderation permission denied.");
+      await Promise.all([loadAdminModeration(),loadAdminEventReviews(),loadEvents(),loadDashboard()]);
+      toast(action==="unpublish"?"Event unpublished. Its data is preserved.":action==="ban"?"Event banned. It cannot be republished until unbanned.":"Event unbanned and returned to drafts for review.");
+    } catch(error) {
+      console.error("StarGates event moderation:",error);
+      toast("Moderation failed. Refresh and check the event status.");
+    } finally {
+      actionLocks.delete(lockKey);
+      setButtonBusy(button,false);
+    }
+  };
+
   async function loadAdminUsers() {
     const list = $("adminUsersList");
     if (!list || !sb) return;
@@ -908,7 +962,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   };
 
   window.showDash = function (panelId, button) {
-    ["sales", "eventsDash", "payouts", "adminReview", "adminApplications", "adminUsers"].forEach((id) => {
+    ["sales", "eventsDash", "payouts", "adminReview", "adminModeration", "adminApplications", "adminUsers"].forEach((id) => {
       const panel = $(id);
       if (panel) panel.style.display = id === panelId ? "block" : "none";
     });
