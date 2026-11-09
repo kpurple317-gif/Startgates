@@ -847,9 +847,9 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const status=$("nearbyMapStatus");if(!initCustomerEventMap()){if(status)status.textContent="The map library could not load. Check your connection and refresh.";return;}
     customerEventMarkers.clearLayers();const bounds=[],events=Array.from(publishedEventDetails.values());let pinned=0;
     const safe=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-    events.forEach(ev=>{if(ev.latitude==null||ev.longitude==null)return;const lat=Number(ev.latitude),lng=Number(ev.longitude);if(!Number.isFinite(lat)||!Number.isFinite(lng))return;pinned++;
+    events.forEach(ev=>{if(ev.latitude==null||ev.longitude==null)return;const lat=Number(ev.latitude),lng=Number(ev.longitude);if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
       const d=customerCoordinates?calculateDistanceKm(customerCoordinates.lat,customerCoordinates.lng,lat,lng):null;
-      const radius=Number($("nearbyRadius")?.value||0);if(radius&&d!=null&&d>radius)return;
+      const radius=Number($("nearbyRadius")?.value||0);if(radius&&d!=null&&d>radius)return;pinned++;
       const directions='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(lat+","+lng);
       const popup='<div class="sg-map-popup"><b>'+safe(ev.title)+'</b><br><span>'+safe(ev.location||"Venue TBA")+'</span>'+(d!=null?'<br><small>'+formatDistanceKm(d)+'</small>':'')+'<br><a href="'+directions+'" target="_blank" rel="noopener">GET DIRECTIONS ↗</a><br><button type="button" onclick="openEventDetails('+JSON.stringify(String(ev.id))+')">VIEW EVENT</button></div>';
       L.marker([lat,lng],{icon:L.divIcon({className:"sg-map-pin",html:"<span>✦</span>",iconSize:[32,32],iconAnchor:[16,30]})}).bindPopup(popup).addTo(customerEventMarkers);bounds.push([lat,lng]);
@@ -866,7 +866,8 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if(!navigator.geolocation){toast("Location is not supported by this browser. You can still browse all events.");return;}
     toast("Requesting your location… It will not be saved to your StarGates account.");
     navigator.geolocation.getCurrentPosition(position=>{
-      customerCoordinates={lat:position.coords.latitude,lng:position.coords.longitude};updateEventDistances();if($("eventSort"))$("eventSort").value="nearest";applyEventFilters();renderNearbyEventMap();
+      customerCoordinates={lat:position.coords.latitude,lng:position.coords.longitude};updateEventDistances();if($("eventSort"))$("eventSort").value="nearest";applyEventFilters();
+      if(panel&&!panel.hidden)renderNearbyEventMap();
       toast("Location found. Events are now sorted by distance.");
     },error=>{const message=error.code===1?"Location permission was denied. Allow location access in your browser settings to see distances.":error.code===2?"Your location could not be determined. Try again in a moment.":"Location request timed out. Please try again.";toast(message+" You can still browse all events.");},{enableHighAccuracy:false,timeout:15000,maximumAge:300000});
   };
