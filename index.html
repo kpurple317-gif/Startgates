@@ -137,7 +137,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 
 <section id="events">
   <div class="head"><div><div class="kicker">DISCOVER</div><h2>EVENTS.</h2></div><p>Music, parties, shows, sports and more. Pick a night and get moving.</p></div>
-  <div class="discovery-tools"><div class="event-search"><input id="eventSearch" type="search" placeholder="Search events, venues or descriptions..." aria-label="Search events"></div><label class="sort-control">SORT BY <select id="eventSort" aria-label="Sort events"><option value="soonest">Soonest</option><option value="price-low">Lowest price</option><option value="price-high">Highest price</option><option value="nearest" disabled>Nearest</option></select></label><div class="nearby-actions"><button class="secondary" type="button" onclick="findEventsNearMe()">⌖ EVENTS NEAR ME</button><button class="secondary" id="nearbyMapToggle" type="button" onclick="toggleNearbyMap()">VIEW MAP</button></div></div>
+  <div class="discovery-tools"><div class="event-search"><input id="eventSearch" type="search" placeholder="Search events, venues or descriptions..." aria-label="Search events"></div><label class="sort-control">SORT BY <select id="eventSort" aria-label="Sort events"><option value="soonest">Soonest</option><option value="price-low">Lowest price</option><option value="price-high">Highest price</option><option value="nearest" disabled>Nearest</option></select></label><div class="nearby-actions"><button class="secondary" type="button" onclick="findEventsNearMe()">⌖ EVENTS NEAR ME</button><button class="secondary" id="nearbyMapToggle" type="button" onclick="toggleNearbyMap()">VIEW MAP</button></div><label class="sort-control">WITHIN <select id="nearbyRadius" aria-label="Filter by distance" disabled><option value="0">Any distance</option><option value="5">5 km</option><option value="10">10 km</option><option value="25">25 km</option><option value="50">50 km</option></select></label></div>
   <div class="filters"><button class="filter active" onclick="filterEvents('all',this)">All</button><button class="filter" onclick="filterEvents('music',this)">Music</button><button class="filter" onclick="filterEvents('parties',this)">Parties</button><button class="filter" onclick="filterEvents('sports',this)">Sports</button><button class="filter" onclick="filterEvents('other',this)">Other</button></div>
   <div class="nearby-map-panel" id="nearbyMapPanel" hidden><div class="nearby-map-heading"><b>✦ EXPLORE EVENT LOCATIONS</b><span class="note">LIVE PINS</span></div><p class="nearby-map-status" id="nearbyMapStatus">Map pins appear when organisers add an exact venue location. Your location is only requested when you tap Events Near Me.</p><div id="nearbyEventsMap" role="region" aria-label="Map of published event locations"></div><p class="map-attribution-note">Map data © OpenStreetMap contributors. Distances are straight-line estimates, not driving distances.</p></div>
   <div class="grid" id="eventGrid" aria-live="polite">
@@ -818,7 +818,9 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     cards.forEach(card => {
       const categoryMatch = selectedEventCategory === "all" || card.dataset.cat === selectedEventCategory;
       const searchMatch = !query || (card.dataset.search || card.textContent || "").includes(query);
-      card.hidden = !(categoryMatch && searchMatch);
+      const radius=Number($("nearbyRadius")?.value||0);
+      const distanceMatch=!radius||(customerCoordinates&&card.dataset.distance!==""&&Number(card.dataset.distance)<=radius);
+      card.hidden = !(categoryMatch && searchMatch && distanceMatch);
       if (!card.hidden) visible++;
     });
     const empty = $("eventSearchEmpty");
@@ -827,7 +829,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   function calculateDistanceKm(lat1,lon1,lat2,lon2){const r=v=>v*Math.PI/180,dLat=r(lat2-lat1),dLon=r(lon2-lon1),a=Math.sin(dLat/2)**2+Math.cos(r(lat1))*Math.cos(r(lat2))*Math.sin(dLon/2)**2;return 6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
   function formatDistanceKm(d){return d<1?Math.max(50,Math.round(d*1000/50)*50)+" m away":d.toFixed(1)+" km away";}
   function updateEventDistances(){
-    const opt=$("eventSort")?.querySelector('option[value="nearest"]');if(opt)opt.disabled=!customerCoordinates;
+    const opt=$("eventSort")?.querySelector('option[value="nearest"]');if(opt)opt.disabled=!customerCoordinates;const radiusSelect=$("nearbyRadius");if(radiusSelect)radiusSelect.disabled=!customerCoordinates;
     document.querySelectorAll("#eventGrid .event-card").forEach(card=>{
       const ev=publishedEventDetails.get(String(card.dataset.eventId)),label=card.querySelector("[data-distance-for]");
       if(!customerCoordinates||!label){if(label)label.hidden=true;card.dataset.distance="";return;}
@@ -847,23 +849,26 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const safe=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
     events.forEach(ev=>{if(ev.latitude==null||ev.longitude==null)return;const lat=Number(ev.latitude),lng=Number(ev.longitude);if(!Number.isFinite(lat)||!Number.isFinite(lng))return;pinned++;
       const d=customerCoordinates?calculateDistanceKm(customerCoordinates.lat,customerCoordinates.lng,lat,lng):null;
-      const popup='<div class="sg-map-popup"><b>'+safe(ev.title)+'</b><br><span>'+safe(ev.location||"Venue TBA")+'</span>'+(d!=null?'<br><small>'+formatDistanceKm(d)+'</small>':'')+'<br><button type="button" onclick="openEventDetails('+JSON.stringify(String(ev.id))+')">VIEW EVENT</button></div>';
+      const radius=Number($("nearbyRadius")?.value||0);if(radius&&d!=null&&d>radius)return;
+      const directions='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(lat+","+lng);
+      const popup='<div class="sg-map-popup"><b>'+safe(ev.title)+'</b><br><span>'+safe(ev.location||"Venue TBA")+'</span>'+(d!=null?'<br><small>'+formatDistanceKm(d)+'</small>':'')+'<br><a href="'+directions+'" target="_blank" rel="noopener">GET DIRECTIONS ↗</a><br><button type="button" onclick="openEventDetails('+JSON.stringify(String(ev.id))+')">VIEW EVENT</button></div>';
       L.marker([lat,lng],{icon:L.divIcon({className:"sg-map-pin",html:"<span>✦</span>",iconSize:[32,32],iconAnchor:[16,30]})}).bindPopup(popup).addTo(customerEventMarkers);bounds.push([lat,lng]);
     });
     if(customerCoordinates){L.circleMarker([customerCoordinates.lat,customerCoordinates.lng],{radius:8,color:"#fff",weight:3,fillColor:"#258cff",fillOpacity:1}).bindPopup("Your current location (only on this device)").addTo(customerEventMarkers);bounds.push([customerCoordinates.lat,customerCoordinates.lng]);}
     if(bounds.length>1)customerEventMap.fitBounds(bounds,{padding:[28,28],maxZoom:13});else if(bounds.length===1)customerEventMap.setView(bounds[0],13);else customerEventMap.setView([-1.286389,36.817223],6);
-    if(status)status.textContent=!pinned?"No event pins have been added yet. Organisers can edit their events and pin the exact venue.":"Showing "+pinned+" published event location(s). "+(customerCoordinates?"Distances are straight-line estimates from your current location.":"Tap EVENTS NEAR ME to see distances from you.");
+    if(status){const radius=Number($("nearbyRadius")?.value||0);status.textContent=!pinned?"No event pins have been added yet. Organisers can edit their events and pin the exact venue.":"Showing "+pinned+" published event location(s). "+(customerCoordinates?"Distances are straight-line estimates from your current location.":"Tap EVENTS NEAR ME to see distances from you.")+(radius?" Filtered to within "+radius+" km.":"");}
     setTimeout(()=>customerEventMap?.invalidateSize(),120);
   }
-  window.toggleNearbyMap=function(){const panel=$("nearbyMapPanel"),button=$("nearbyMapToggle");if(!panel)return;panel.hidden=!panel.hidden;if(button)button.textContent=panel.hidden?"VIEW MAP":"HIDE MAP";if(!panel.hidden)renderNearbyEventMap();};
+  window.toggleNearbyMap=function(){const panel=$("nearbyMapPanel"),button=$("nearbyMapToggle"),grid=$("eventGrid");if(!panel)return;panel.hidden=!panel.hidden;if(grid)grid.hidden=!panel.hidden;if(button)button.textContent=panel.hidden?"VIEW MAP":"LIST VIEW";if(!panel.hidden)renderNearbyEventMap();};
+  $("nearbyRadius")?.addEventListener("change",()=>{applyEventFilters();if(customerEventMap&&$("nearbyMapPanel")&&!$("nearbyMapPanel").hidden)renderNearbyEventMap();});
   window.findEventsNearMe=function(){
-    const panel=$("nearbyMapPanel"),status=$("nearbyMapStatus");if(panel)panel.hidden=false;if($("nearbyMapToggle"))$("nearbyMapToggle").textContent="HIDE MAP";
-    if(!navigator.geolocation){if(status)status.textContent="Location is not supported by this browser. You can still explore event pins on the map.";renderNearbyEventMap();return;}
-    if(status)status.textContent="Requesting your location… Your location is not saved to your StarGates account.";
+    const panel=$("nearbyMapPanel"),grid=$("eventGrid");if(panel)panel.hidden=true;if(grid)grid.hidden=false;if($("nearbyMapToggle"))$("nearbyMapToggle").textContent="VIEW MAP";
+    if(!navigator.geolocation){toast("Location is not supported by this browser. You can still browse all events.");return;}
+    toast("Requesting your location… It will not be saved to your StarGates account.");
     navigator.geolocation.getCurrentPosition(position=>{
       customerCoordinates={lat:position.coords.latitude,lng:position.coords.longitude};updateEventDistances();if($("eventSort"))$("eventSort").value="nearest";applyEventFilters();renderNearbyEventMap();
-      if(status)status.textContent="Location found. Events are now sorted by straight-line distance. Your location stays on this device.";
-    },error=>{const message=error.code===1?"Location permission was denied. Allow location access in your browser settings to see distances.":error.code===2?"Your location could not be determined. Try again in a moment.":"Location request timed out. Please try again.";if(status)status.textContent=message+" You can still browse the event map.";renderNearbyEventMap();},{enableHighAccuracy:false,timeout:15000,maximumAge:300000});
+      toast("Location found. Events are now sorted by distance.");
+    },error=>{const message=error.code===1?"Location permission was denied. Allow location access in your browser settings to see distances.":error.code===2?"Your location could not be determined. Try again in a moment.":"Location request timed out. Please try again.";toast(message+" You can still browse all events.");},{enableHighAccuracy:false,timeout:15000,maximumAge:300000});
   };
   function initOrganizerPinMap(){
     if(organizerPinMap)return true;if(!window.L)return false;
@@ -879,7 +884,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const wrap=$("orgPinMapWrap");if(!wrap)return;wrap.hidden=!wrap.hidden;if(wrap.hidden)return;
     if(!initOrganizerPinMap()){toast("Map library could not load. Check your connection.");return;}
     const lat=Number($("orgLatitude").value),lng=Number($("orgLongitude").value);
-    if($("orgLatitude").value!==""&&$("orgLongitude").value!==""){organizerPinMap.setView([lat,lng],15);if(organizerPinMarker)organizerPinMarker.setLatLng([lat,lng]);else organizerPinMarker=L.marker([lat,lng]).addTo(organizerPinMap);}else organizerPinMap.setView([-1.286389,36.817223],6);
+    if($("orgLatitude").value!==""&&$("orgLongitude").value!==""){organizerPinMap.setView([lat,lng],15);if(organizerPinMarker)organizerPinMarker.setLatLng([lat,lng]);else organizerPinMarker=L.marker([lat,lng]).addTo(organizerPinMap);}else{if(organizerPinMarker){organizerPinMap.removeLayer(organizerPinMarker);organizerPinMarker=null;}organizerPinMap.setView([-1.286389,36.817223],6);}
     setTimeout(()=>organizerPinMap?.invalidateSize(),120);
   };
   window.useOrganizerCurrentLocation=function(){
