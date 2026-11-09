@@ -46,6 +46,21 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 @media(max-width:800px){.hero-waveform{bottom:0;height:38px;width:min(340px,78%)}}
 @media(prefers-reduced-motion:reduce){.hero-waveform span{animation:none;height:18%}.hero-waveform span:nth-child(3n){height:34%}.hero-waveform span:nth-child(4n){height:23%}}
 
+
+.spotlight-section{padding:54px 7vw 22px;background:linear-gradient(180deg,#0b0d08,#050605)}
+.spotlight-kicker,.spotlight-label{color:var(--lime);font-size:10px;font-weight:950;letter-spacing:2.5px}
+.spotlight-kicker{margin-bottom:16px}
+.spotlight-card{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:260px;overflow:hidden;border:1px solid #414a30;border-radius:18px;background:linear-gradient(120deg,#171b11,#0c0e0a);box-shadow:0 18px 55px #0006}
+.spotlight-image{display:block;width:100%;height:100%;min-height:260px;max-height:390px;object-fit:cover;background:#12150d}
+.spotlight-placeholder{display:grid;place-items:center;color:var(--lime);font-weight:950;font-size:24px;letter-spacing:2px}
+.spotlight-copy{padding:clamp(22px,4vw,46px);display:flex;flex-direction:column;align-items:flex-start;justify-content:center}
+.spotlight-copy h2{font-size:clamp(30px,5vw,58px);line-height:.95;letter-spacing:-.06em;margin:14px 0}
+.spotlight-copy p{color:#a3a696;line-height:1.6;margin:0 0 22px}
+.spotlight-copy .primary{background:var(--lime);color:#090a07;border-radius:10px}
+.spotlight-select{display:block;width:100%;max-width:560px;margin:10px 0 14px;padding:13px;border:1px solid #3b4430;border-radius:12px;background:#080a07;color:#fff}
+.spotlight-admin-actions{display:flex;gap:10px;flex-wrap:wrap}
+@media(max-width:700px){.spotlight-section{padding:42px 5vw 12px}.spotlight-card{grid-template-columns:1fr}.spotlight-image{min-height:190px;max-height:260px}.spotlight-copy{padding:24px}}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -76,6 +91,11 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   </div>
 </section>
 
+<section id="spotlightSection" class="spotlight-section" hidden>
+  <div class="spotlight-kicker">✦ STARGATES SPOTLIGHT</div>
+  <div id="spotlightContent"></div>
+</section>
+
 <section class="intro-strip">
   <span>FOR THE CURIOUS</span><b>Discover something new.</b><i>✦</i><b>Make plans that matter.</b><span>FOR THE CREATORS</span>
 </section>
@@ -98,10 +118,11 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   <div class="head"><div><div class="kicker">PLATFORM OWNER</div><h2>CONTROL ROOM.</h2></div><p>See what is happening across the marketplace: events, buyers, sales and your commission.</p></div>
   <div class="dash-grid"><div class="stat"><b id="activeEvents">0</b><span>Active events</span></div><div class="stat"><b id="ticketsSold">0</b><span>Tickets sold</span></div><div class="stat"><b id="customerCount">0</b><span>Registered users</span></div><div class="stat"><b id="commission">KSh 0</b><span>Commission earned</span></div></div>
   <div class="dash-panel">
-    <div class="tabs"><button class="tab active" onclick="showDash('sales',this)">Sales</button><button class="tab" onclick="showDash('eventsDash',this)">My Events</button><button class="tab" onclick="showDash('payouts',this)">Payouts</button><button class="tab" id="organizerInboxTab" style="display:none" onclick="showDash('organizerInbox',this)"><span class="inbox-bell">♢ INBOX <span id="inboxUnreadBadge" style="display:none">0</span></span></button><button class="tab" id="adminReviewTab" style="display:none" onclick="showDash('adminReview',this)">EVENT REVIEW</button><button class="tab" id="adminModerationTab" style="display:none" onclick="showDash('adminModeration',this)">EVENT MODERATION</button><button class="tab" id="adminApplicationsTab" style="display:none" onclick="showDash('adminApplications',this)">ORGANIZER APPLICATIONS</button><button class="tab" id="adminUsersTab" style="display:none" onclick="showDash('adminUsers',this)">USER MANAGEMENT</button><button class="tab" onclick="openVerify()">VERIFY TICKET</button></div>
+    <div class="tabs"><button class="tab active" onclick="showDash('sales',this)">Sales</button><button class="tab" onclick="showDash('eventsDash',this)">My Events</button><button class="tab" onclick="showDash('payouts',this)">Payouts</button><button class="tab" id="organizerInboxTab" style="display:none" onclick="showDash('organizerInbox',this)"><span class="inbox-bell">♢ INBOX <span id="inboxUnreadBadge" style="display:none">0</span></span></button><button class="tab" id="adminSpotlightTab" style="display:none" onclick="showDash('adminSpotlight',this)">SPOTLIGHT ✦</button><button class="tab" id="adminReviewTab" style="display:none" onclick="showDash('adminReview',this)">EVENT REVIEW</button><button class="tab" id="adminModerationTab" style="display:none" onclick="showDash('adminModeration',this)">EVENT MODERATION</button><button class="tab" id="adminApplicationsTab" style="display:none" onclick="showDash('adminApplications',this)">ORGANIZER APPLICATIONS</button><button class="tab" id="adminUsersTab" style="display:none" onclick="showDash('adminUsers',this)">USER MANAGEMENT</button><button class="tab" onclick="openVerify()">VERIFY TICKET</button></div>
     <div id="sales"><h3>Recent event sales</h3><table class="table"><thead><tr><th>Event</th><th>Organizer</th><th>Tickets</th><th>Gross</th><th>Commission</th></tr></thead><tbody><tr><td colspan="5">No verified sales yet. Sales will appear after real payments are connected.</td></tr></tbody></table></div>
     <div id="eventsDash" style="display:none"><h3>Events you manage</h3><p class="note">No organizer events are connected yet.</p></div>
     <div id="payouts" style="display:none"><h3>Payouts</h3><p class="note">Payouts will appear after real payments and settlement are connected.</p></div><div id="organizerInbox" style="display:none"><div class="inbox-heading"><div><div class="kicker">YOUR UPDATES</div><h3>Notifications</h3><p class="inbox-intro">Everything happening around your organizer account, in one place.</p></div><button class="secondary" onclick="markAllNotificationsRead()">MARK ALL READ</button></div><div id="organizerInboxList"><div class="inbox-empty">♢<strong>You&#39;re all caught up</strong>New followers and event updates will show here.</div></div></div>
+    <div id="adminSpotlight" style="display:none"><div class="kicker">HOMEPAGE FEATURE</div><h3>Spotlight event</h3><p class="note">Choose one published event to feature on the homepage. Only real published events can be selected.</p><div id="adminSpotlightContent"><p class="note">Loading spotlight controls…</p></div></div>
     <div id="adminReview" style="display:none"><h3>Event submissions</h3><div id="adminReviewList"><p class="note">Admin access required.</p></div></div>
     <div id="adminModeration" style="display:none"><h3>Published & restricted events</h3><p class="note">Unpublish removes an event from public listings. Ban blocks republishing until an admin unbans it.</p><div id="adminModerationList"><p class="note">Admin access required.</p></div></div>
     <div id="adminApplications" style="display:none"><h3>Organizer applications</h3><div id="adminApplicationsList"><p class="note">Admin access required.</p></div></div>
@@ -341,6 +362,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     });
     const visibleEvents = Array.from(uniqueEvents.values());
     publishedEventDetails = new Map(visibleEvents.map(ev => [String(ev.id), ev]));
+    await loadSpotlight();
     const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
     grid.innerHTML = visibleEvents.map(ev => {
       const tickets = ev.ticket_types || [];
@@ -593,10 +615,12 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (applicationsTab) applicationsTab.style.display = isAdmin ? "inline-flex" : "none";
     const usersTab = $("adminUsersTab");
     if (usersTab) usersTab.style.display = isAdmin ? "inline-flex" : "none";
+    const spotlightTab = $("adminSpotlightTab");
+    if (spotlightTab) spotlightTab.style.display = isAdmin ? "inline-flex" : "none";
     const moderationTab = $("adminModerationTab");
     if (moderationTab) moderationTab.style.display = isAdmin ? "inline-flex" : "none";
     if (isAdmin) {
-      await Promise.all([loadAdminEventReviews(), loadAdminModeration(), loadAdminApplications(), loadAdminUsers()]);
+      await Promise.all([loadAdminEventReviews(), loadAdminModeration(), loadAdminApplications(), loadAdminUsers(), loadSpotlightAdmin()]);
     }
     const { data: events, error } = await sb.from("events")
       .select("id,title,status,event_date,location,description,category,image_url,trailer_url,ticket_types(name,price,quantity)")
@@ -888,6 +912,76 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     }
   };
 
+
+  async function loadSpotlight() {
+    const section = $("spotlightSection");
+    const content = $("spotlightContent");
+    if (!section || !content || !sb) return;
+    const result = await sb.from("featured_event").select("event_id").eq("slot","homepage").maybeSingle();
+    if (result.error || !result.data) { section.hidden = true; return; }
+    const ev = publishedEventDetails.get(String(result.data.event_id));
+    if (!ev) { section.hidden = true; return; }
+    const safe = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+    const image = ev.image_url
+      ? '<img class="spotlight-image" src="' + safe(ev.image_url) + '" alt="' + safe(ev.title) + ' poster" loading="lazy">'
+      : '<div class="spotlight-image spotlight-placeholder">✦ STARGATES</div>';
+    const date = ev.event_date ? new Date(ev.event_date).toLocaleDateString() : "Date TBA";
+    content.innerHTML = '<div class="spotlight-card">' + image + '<div class="spotlight-copy"><span class="spotlight-label">FEATURED EXPERIENCE</span><h2>' + safe(ev.title) + '</h2><p>' + safe(ev.location || "Venue to be announced") + ' · ' + safe(date) + '</p><button class="primary" type="button" onclick="openEventDetails(' + JSON.stringify(String(ev.id)) + ')">EXPLORE SPOTLIGHT ↗</button></div></div>';
+    section.hidden = false;
+  }
+
+  async function loadSpotlightAdmin() {
+    const panel = $("adminSpotlightContent");
+    if (!panel || !sb) return;
+    const authResult = await sb.auth.getUser();
+    if (authResult.error || !authResult.data.user) { panel.innerHTML = '<p class="note">Log in as an admin to manage Spotlight.</p>'; return; }
+    const user = authResult.data.user;
+    const profileResult = await sb.from("profiles").select("role").eq("id", user.id).maybeSingle();
+    if (profileResult.error || profileResult.data?.role !== "admin") { panel.innerHTML = '<p class="note">Admin access required.</p>'; return; }
+    const results = await Promise.all([
+      sb.from("events").select("id,title,event_date").eq("status","published").order("event_date"),
+      sb.from("featured_event").select("event_id").eq("slot","homepage").maybeSingle()
+    ]);
+    const eventsResult = results[0], featuredResult = results[1];
+    if (eventsResult.error || featuredResult.error) { panel.innerHTML = '<p class="note">Could not load Spotlight controls. Refresh and try again.</p>'; return; }
+    const events = eventsResult.data || [];
+    const featured = featuredResult.data;
+    if (!events.length) { panel.innerHTML = '<p class="note">There are no published events to feature yet. Approve an event first.</p>'; return; }
+    const safe = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+    const options = events.map(ev => {
+      const date = ev.event_date ? new Date(ev.event_date).toLocaleDateString() : "Date TBA";
+      return '<option value="' + safe(ev.id) + '" ' + (featured?.event_id === ev.id ? "selected" : "") + '>' + safe(ev.title) + ' · ' + safe(date) + '</option>';
+    }).join("");
+    panel.innerHTML = '<label class="note" for="spotlightEventSelect">SELECT A PUBLISHED EVENT</label><select id="spotlightEventSelect" class="spotlight-select">' + options + '</select><div class="spotlight-admin-actions"><button class="primary" type="button" onclick="saveSpotlightSelection()">SAVE SPOTLIGHT</button>' + (featured ? '<button class="secondary" type="button" onclick="clearSpotlightSelection()">REMOVE SPOTLIGHT</button>' : '') + '</div><p class="note">' + (featured ? 'A featured event is currently selected.' : 'No event is currently featured.') + '</p>';
+  }
+
+  window.saveSpotlightSelection = async function() {
+    const eventId = $("spotlightEventSelect")?.value;
+    if (!eventId || !sb) return toast("Choose a published event first.");
+    const authResult = await sb.auth.getUser();
+    if (authResult.error || !authResult.data.user) return toast("Log in as an admin first.");
+    const user = authResult.data.user;
+    const profileResult = await sb.from("profiles").select("role").eq("id", user.id).maybeSingle();
+    if (profileResult.data?.role !== "admin") return toast("Only admins can manage Spotlight.");
+    const result = await sb.from("featured_event").upsert({slot:"homepage",event_id:eventId,selected_by:user.id,updated_at:new Date().toISOString()},{onConflict:"slot"});
+    if (result.error) return toast("Could not save Spotlight: " + result.error.message);
+    await Promise.all([loadSpotlightAdmin(), loadSpotlight()]);
+    toast("Spotlight event updated.");
+  };
+
+  window.clearSpotlightSelection = async function() {
+    if (!sb || !confirm("Remove the current homepage Spotlight?")) return;
+    const authResult = await sb.auth.getUser();
+    if (authResult.error || !authResult.data.user) return toast("Log in as an admin first.");
+    const user = authResult.data.user;
+    const profileResult = await sb.from("profiles").select("role").eq("id", user.id).maybeSingle();
+    if (profileResult.data?.role !== "admin") return toast("Only admins can manage Spotlight.");
+    const result = await sb.from("featured_event").delete().eq("slot","homepage");
+    if (result.error) return toast("Could not remove Spotlight: " + result.error.message);
+    await Promise.all([loadSpotlightAdmin(), loadSpotlight()]);
+    toast("Homepage Spotlight removed.");
+  };
+
     async function loadAdminEventReviews() {
     const list = $("adminReviewList");
     if (!list || !sb) return;
@@ -1126,7 +1220,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   };
 
   window.showDash = function (panelId, button) {
-    ["sales", "eventsDash", "payouts", "organizerInbox", "adminReview", "adminModeration", "adminApplications", "adminUsers"].forEach((id) => {
+    ["sales", "eventsDash", "payouts", "organizerInbox", "adminSpotlight", "adminReview", "adminModeration", "adminApplications", "adminUsers"].forEach((id) => {
       const panel = $(id);
       if (panel) panel.style.display = id === panelId ? "block" : "none";
     });
@@ -1135,6 +1229,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
         tab.classList.toggle("active", tab === button);
     });
     if(panelId==="organizerInbox")loadOrganizerInbox();
+    if(panelId==="adminSpotlight")loadSpotlightAdmin();
   };
 
   document.addEventListener("keydown", (event) => {
