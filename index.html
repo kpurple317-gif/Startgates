@@ -37,6 +37,15 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 @media(max-width:800px){header{gap:10px;padding-left:4vw;padding-right:4vw}.nav{gap:9px;flex:0 0 auto}.nav button{white-space:nowrap;flex:0 0 auto;padding:10px 11px;font-size:11px}}@media(max-width:520px){.nav{gap:6px}.nav button{padding:9px 9px;font-size:10px;letter-spacing:-.2px}.brand-mark{width:38px;height:29px}.brand{gap:5px;letter-spacing:1px}}@media(max-width:520px){.discovery-tools{align-items:stretch;flex-direction:column}.event-search input{max-width:none}.sort-control{justify-content:space-between}.sort-control select{flex:1}.hero{padding:60px 6vw 35px}.hero h1{font-size:clamp(51px,14vw,76px);letter-spacing:-.07em}.hero p{font-size:14px}.hero-art{height:330px}.art-ticket{width:245px;min-height:285px;padding:18px}.art-ticket-main strong{font-size:42px}.art-stamp{right:3px;bottom:18px}.orbit-one{width:300px}.orbit-two{width:340px}.hero-foot{font-size:8px;gap:9px}.intro-strip b{font-size:12px}#events{padding-top:65px}}
 
 .event-countdown{margin:18px 0;padding:15px;border:1px solid #414b2e;border-radius:16px;background:linear-gradient(135deg,#171d10,#0c0f0a)}.event-countdown-label{display:flex;align-items:center;gap:8px;color:var(--lime);font-size:9px;font-weight:950;letter-spacing:2px;margin-bottom:12px}.event-countdown-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.event-countdown-unit{padding:10px 4px;text-align:center;background:#080a07;border:1px solid #303927;border-radius:10px}.event-countdown-unit b{display:block;font-size:clamp(22px,4vw,32px);line-height:1.1;letter-spacing:-1px;font-weight:950;color:#fff;font-variant-numeric:tabular-nums}.event-countdown-unit small{display:block;margin-top:5px;color:#858b79;font-size:8px;letter-spacing:1px}.event-countdown-live{color:var(--lime);font-size:19px;font-weight:950;letter-spacing:1px}@media(max-width:380px){.event-countdown{padding:11px}.event-countdown-grid{gap:5px}.event-countdown-unit{padding:9px 2px}}
+
+/* StarGates live atmosphere — lightweight animated soundwave */
+.hero-waveform{position:absolute;z-index:1;left:50%;bottom:7px;transform:translateX(-50%);width:min(390px,82%);height:48px;display:flex;align-items:center;justify-content:center;gap:5px;opacity:.72;pointer-events:none}
+.hero-waveform span{display:block;width:5px;height:12%;min-height:5px;border-radius:99px;background:linear-gradient(180deg,#e7ffb1,var(--lime));box-shadow:0 0 12px #c7ff4a55;transform-origin:center;animation:sg-wave 1.15s ease-in-out infinite alternate}
+.hero-waveform span:nth-child(3n){animation-duration:.82s}.hero-waveform span:nth-child(3n + 1){animation-duration:1.34s}.hero-waveform span:nth-child(4n){animation-delay:-.5s}.hero-waveform span:nth-child(5n){animation-delay:-.8s}
+@keyframes sg-wave{0%{height:10%}35%{height:38%}70%{height:78%}100%{height:24%}}
+@media(max-width:800px){.hero-waveform{bottom:0;height:38px;width:min(340px,78%)}}
+@media(prefers-reduced-motion:reduce){.hero-waveform span{animation:none;height:18%}.hero-waveform span:nth-child(3n){height:34%}.hero-waveform span:nth-child(4n){height:23%}}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -57,6 +66,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   <div class="hero-art" aria-hidden="true">
     <div class="art-orbit orbit-one"></div><div class="art-orbit orbit-two"></div>
     <div class="art-glow"></div>
+    <div class="hero-waveform" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
     <div class="art-ticket">
       <div class="art-ticket-top"><span>STARGATES / 001</span><span>✦</span></div>
       <div class="art-ticket-main"><span class="art-kicker">THE NIGHT IS YOURS</span><strong>GO<br>BEYOND<br>ORDINARY<span>.</span></strong></div>
