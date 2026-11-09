@@ -693,6 +693,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (!auth.user) {
       updateAccountUI(null, null);
       if (adminTab) adminTab.style.display = "none";
+      if ($("adminSpotlightTab")) $("adminSpotlightTab").style.display = "none";
       if ($("activeEvents")) $("activeEvents").textContent = "0";
       if (panel) panel.innerHTML = "<h3>My Events</h3><p class='note'>Log in to see your organiser dashboard.</p>";
       return;
