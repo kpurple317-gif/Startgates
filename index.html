@@ -191,7 +191,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 </div></div>
 
 <div class="modal" id="orgModal" onclick="if(event.target===this)closeModal('orgModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">ORGANIZER</div><h3 id="orgModalHeading">CREATE EVENT.</h3></div><button class="close" onclick="closeModal('orgModal')">×</button></div>
-  <div class="form"><label>Event name<input id="orgName" placeholder="e.g. Summer Festival"></label><label>Category<select id="orgCat"><option>Music</option><option>Parties</option><option>Sports</option><option>Other</option></select></label><label>Date<input id="orgDate" type="date"></label><label>Venue<input id="orgVenue" placeholder="Venue / location"></label><div class="event-pin-controls"><button type="button" class="secondary" onclick="toggleOrganizerPinMap()">📍 PIN VENUE ON MAP</button><button type="button" class="secondary" onclick="useOrganizerCurrentLocation()">USE MY CURRENT LOCATION</button><small class="note" id="orgPinStatus">Optional, but required for accurate distance and map pins.</small></div><input type="hidden" id="orgLatitude"><input type="hidden" id="orgLongitude"><div id="orgPinMapWrap" hidden><p class="note">Zoom to the exact venue, then tap the map to place its pin.</p><div id="orgPinMap" role="region" aria-label="Choose event venue on map"></div></div><label>Description<textarea id="orgDesc" placeholder="Tell people what makes your event worth attending."></textarea></label><label>Event cover photo<input id="orgCover" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><label>Event gallery photos (optional)<input id="orgGallery" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><small class="note">Up to 8 extra photos · JPG, PNG, WebP or GIF · 10 MB each</small></label><div id="orgGalleryExisting" class="gallery-manage-grid"></div><label>Event trailer video<input id="orgVideo" type="file" accept="video/mp4,video/webm"><small class="note">MP4 or WebM · Maximum 50 MB</small></label><label>Or paste a video URL (optional)<input id="orgTrailer" type="url" placeholder="https://..."></label><label>Ticket types — add artwork to each ticket</label><div id="ticketTypeRows"><div class="ticket-type-row" style="border:1px solid #333;border-radius:14px;padding:12px;display:grid;gap:9px"><input class="ticket-type-name" placeholder="Ticket name — e.g. Early Bird"><input class="ticket-type-price" type="number" min="0" step="1" placeholder="Price in KSh — e.g. 500"><input class="ticket-type-quantity" type="number" min="1" step="1" placeholder="Quantity — e.g. 100"><label>Ticket artwork (optional)<input class="ticket-type-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label></div></div><button type="button" class="secondary" onclick="addTicketType()">+ ADD ANOTHER TICKET TYPE</button><label>Your platform commission %<input id="orgCommission" type="number" min="0" max="100" placeholder="5"></label><button id="orgSubmitButton" class="primary" onclick="publishEvent()">PUBLISH EVENT</button></div>
+  <div class="form"><label>Event name<input id="orgName" placeholder="e.g. Summer Festival"></label><label>Category<select id="orgCat"><option>Music</option><option>Parties</option><option>Sports</option><option>Other</option></select></label><label>Date<input id="orgDate" type="date"></label><label>Venue<input id="orgVenue" placeholder="Venue / location"></label><div class="event-pin-controls"><button type="button" class="secondary" onclick="toggleOrganizerPinMap()">📍 PIN VENUE ON MAP</button><button type="button" class="secondary" onclick="useOrganizerCurrentLocation()">USE MY CURRENT LOCATION</button><button type="button" class="primary" id="saveVenuePinButton" style="display:none" onclick="saveOrganizerVenuePin()">SAVE VENUE PIN</button><small class="note" id="orgPinStatus">Optional, but required for accurate distance and map pins.</small></div><input type="hidden" id="orgLatitude"><input type="hidden" id="orgLongitude"><div id="orgPinMapWrap" hidden><p class="note">Zoom to the exact venue, then tap the map to place its pin.</p><div id="orgPinMap" role="region" aria-label="Choose event venue on map"></div></div><label>Description<textarea id="orgDesc" placeholder="Tell people what makes your event worth attending."></textarea></label><label>Event cover photo<input id="orgCover" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><label>Event gallery photos (optional)<input id="orgGallery" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><small class="note">Up to 8 extra photos · JPG, PNG, WebP or GIF · 10 MB each</small></label><div id="orgGalleryExisting" class="gallery-manage-grid"></div><label>Event trailer video<input id="orgVideo" type="file" accept="video/mp4,video/webm"><small class="note">MP4 or WebM · Maximum 50 MB</small></label><label>Or paste a video URL (optional)<input id="orgTrailer" type="url" placeholder="https://..."></label><label>Ticket types — add artwork to each ticket</label><div id="ticketTypeRows"><div class="ticket-type-row" style="border:1px solid #333;border-radius:14px;padding:12px;display:grid;gap:9px"><input class="ticket-type-name" placeholder="Ticket name — e.g. Early Bird"><input class="ticket-type-price" type="number" min="0" step="1" placeholder="Price in KSh — e.g. 500"><input class="ticket-type-quantity" type="number" min="1" step="1" placeholder="Quantity — e.g. 100"><label>Ticket artwork (optional)<input class="ticket-type-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label></div></div><button type="button" class="secondary" onclick="addTicketType()">+ ADD ANOTHER TICKET TYPE</button><label>Your platform commission %<input id="orgCommission" type="number" min="0" max="100" placeholder="5"></label><button id="orgSubmitButton" class="primary" onclick="publishEvent()">PUBLISH EVENT</button></div>
   <div class="note">Demo organizer flow. Production version saves this event to a database and publishes it to the marketplace.</div>
 </div></div>
 
@@ -270,7 +270,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (!profile || !["organizer","admin"].includes(profile.role)) {
       openModal("applyModal"); return toast("Apply to host first. Organiser access requires approval.");
     }
-    $("orgLatitude").value="";$("orgLongitude").value="";$("orgPinStatus").textContent="Optional, but required for accurate distance and map pins.";$("orgPinMapWrap").hidden=true;
+    $("orgLatitude").value="";$("orgLongitude").value="";$("orgPinStatus").textContent="Optional, but required for accurate distance and map pins.";$("orgPinMapWrap").hidden=true;$("saveVenuePinButton").style.display="none";
     if(organizerPinMarker&&organizerPinMap){organizerPinMap.removeLayer(organizerPinMarker);organizerPinMarker=null;}
     openModal("orgModal");
   };
@@ -847,7 +847,11 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const status=$("nearbyMapStatus");if(!initCustomerEventMap()){if(status)status.textContent="The map library could not load. Check your connection and refresh.";return;}
     customerEventMarkers.clearLayers();const bounds=[],events=Array.from(publishedEventDetails.values());let pinned=0;
     const safe=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-    events.forEach(ev=>{if(ev.latitude==null||ev.longitude==null)return;const lat=Number(ev.latitude),lng=Number(ev.longitude);if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
+    const query=($("eventSearch")?.value||"").trim().toLowerCase();
+    events.forEach(ev=>{
+      if(selectedEventCategory!=="all"&&String(ev.category||"other").toLowerCase()!==selectedEventCategory)return;
+      if(query&&![ev.title,ev.description,ev.location].join(" ").toLowerCase().includes(query))return;
+      if(ev.latitude==null||ev.longitude==null)return;const lat=Number(ev.latitude),lng=Number(ev.longitude);if(!Number.isFinite(lat)||!Number.isFinite(lng))return;
       const d=customerCoordinates?calculateDistanceKm(customerCoordinates.lat,customerCoordinates.lng,lat,lng):null;
       const radius=Number($("nearbyRadius")?.value||0);if(radius&&d!=null&&d>radius)return;pinned++;
       const directions='https://www.google.com/maps/dir/?api=1&destination='+encodeURIComponent(lat+","+lng);
@@ -881,6 +885,21 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     $("orgLatitude").value=Number(lat).toFixed(6);$("orgLongitude").value=Number(lng).toFixed(6);$("orgPinStatus").textContent="Venue pin set: "+Number(lat).toFixed(5)+", "+Number(lng).toFixed(5);
     if(!initOrganizerPinMap())return;if(organizerPinMarker)organizerPinMarker.setLatLng([lat,lng]);else organizerPinMarker=L.marker([lat,lng]).addTo(organizerPinMap);
   }
+  window.saveOrganizerVenuePin=async function(){
+    if(!editingEventId)return toast("Save the event draft first, then add its venue pin.");
+    const lat=Number($("orgLatitude")?.value),lng=Number($("orgLongitude")?.value);
+    if($("orgLatitude")?.value===""||$("orgLongitude")?.value===""||!Number.isFinite(lat)||!Number.isFinite(lng))return toast("Place a pin on the map first.");
+    const button=$("saveVenuePinButton");setButtonBusy(button,true,"SAVING PIN…");
+    try{
+      const {data:auth,error:authError}=await sb.auth.getUser();if(authError||!auth.user)throw new Error("Log in again.");
+      const {error}=await sb.from("events").update({latitude:lat,longitude:lng}).eq("id",editingEventId).eq("organizer_id",auth.user.id);
+      if(error)throw error;
+      $("orgPinStatus").textContent="Venue pin saved successfully.";
+      toast("Venue pin saved. The event stays published.");
+      await loadEvents();
+    }catch(error){toast("Could not save venue pin: "+(error.message||"Please try again."));}
+    finally{setButtonBusy(button,false);}
+  };
   window.toggleOrganizerPinMap=function(){
     const wrap=$("orgPinMapWrap");if(!wrap)return;wrap.hidden=!wrap.hidden;if(wrap.hidden)return;
     if(!initOrganizerPinMap()){toast("Map library could not load. Check your connection.");return;}
@@ -959,7 +978,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     $("orgDate").value=event.event_date?new Date(event.event_date).toISOString().slice(0,10):"";
     $("orgVenue").value=event.location||"";$("orgDesc").value=event.description||"";$("orgTrailer").value=event.trailer_url||"";
     $("orgLatitude").value=event.latitude??"";$("orgLongitude").value=event.longitude??"";
-    $("orgPinStatus").textContent=event.latitude!=null&&event.longitude!=null?"Venue pin saved. You can move it on the map.":"No venue pin saved yet.";$("orgPinMapWrap").hidden=true;
+    $("orgPinStatus").textContent=event.latitude!=null&&event.longitude!=null?"Venue pin saved. You can move it on the map.":"No venue pin saved yet.";$("orgPinMapWrap").hidden=true;$("saveVenuePinButton").style.display="inline-flex";
     $("orgCover").value="";$("orgVideo").value="";$("orgGallery").value="";$("orgGalleryExisting").innerHTML="<p class=note>Loading existing gallery…</p>";$("orgCommission").value="";
     const {data:ticketRows,error:ticketLoadError}=await sb.from("ticket_types").select("id,name,price,quantity,image_url").eq("event_id",event.id).order("created_at");
     if(ticketLoadError)return toast("Could not load this event's ticket types: "+ticketLoadError.message);
