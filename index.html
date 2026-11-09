@@ -235,7 +235,21 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       options: { data: { full_name: fullName }, emailRedirectTo: "https://startgates.vercel.app" }
     });
     if (error) {
-      $("authMessage").textContent = error.message;
+      const rateLimitError = /over_email_send_rate_limit|email rate limit|rate limit.*email|email.*rate limit/i.test(error.message || "");
+      if (rateLimitError) {
+        const queued = await sb.from("signup_retry_queue").insert({
+          email: email.toLowerCase(),
+          last_error: String(error.message || "Email rate limit exceeded").slice(0, 300)
+        });
+        if (!queued.error || queued.error.code === "23505") {
+          $("authMessage").textContent = "Signup emails are temporarily rate-limited. StarGates has saved this email for a retry notice. We cannot send that notice until our email domain is verified, so please try again later. Do not create another account.";
+        } else {
+          $("authMessage").textContent = "Signup emails are temporarily rate-limited. Please try again later. We couldn't save a retry notice for this email.";
+          console.error("Could not queue signup retry notice:", queued.error.message);
+        }
+      } else {
+        $("authMessage").textContent = error.message;
+      }
       return;
     }
     if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
