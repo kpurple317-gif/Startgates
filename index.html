@@ -436,7 +436,17 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       const current = Number(countNode.textContent.replace(/,/g,"")) || 0;
       countNode.textContent = Math.max(0,current + (nowFollowing ? 1 : -1)).toLocaleString();
     }
-    toast(nowFollowing ? "You're now following this organizer." : "You unfollowed this organizer.");
+    let emailWarning = "";
+    if (nowFollowing) {
+      const { error: emailError } = await sb.functions.invoke("notify-organizer-decision", {
+        body: { kind: "follower", organizerId }
+      });
+      if (emailError) {
+        console.warn("StarGates follower email:", emailError);
+        emailWarning = " The in-app alert is saved, but the email could not be sent.";
+      }
+    }
+    toast(nowFollowing ? "You're now following this organizer." + emailWarning : "You unfollowed this organizer.");
   };
   $("eventDetailContent")?.addEventListener("click", event => {
     const button = event.target.closest("[data-open-organizer]");
@@ -851,8 +861,12 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       const {data,error}=await sb.from("events").update(update).eq("id",eventId).select("id,status,is_banned").maybeSingle();
       if(error) return toast("Could not update event: "+error.message);
       if(!data) return toast("Event not found or moderation permission denied.");
+      const { error: emailError } = await sb.functions.invoke("notify-organizer-decision", {
+        body: { kind: "moderation", id: eventId, action }
+      });
       await Promise.all([loadAdminModeration(),loadAdminEventReviews(),loadEvents(),loadDashboard()]);
-      toast(action==="unpublish"?"Event unpublished. Its data is preserved.":action==="ban"?"Event banned. It cannot be republished until unbanned.":"Event unbanned and returned to drafts for review.");
+      const actionMessage = action==="unpublish"?"Event unpublished. Its data is preserved.":action==="ban"?"Event banned. It cannot be republished until unbanned.":"Event unbanned and returned to drafts for review.";
+      toast(emailError ? actionMessage + " In-app alert saved, but organizer email could not be sent." : actionMessage + " Organizer email sent.");
     } catch(error) {
       console.error("StarGates event moderation:",error);
       toast("Moderation failed. Refresh and check the event status.");
