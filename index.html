@@ -387,17 +387,66 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       return;
     }
     const safe = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+    const [{count: followerCount,error: countError},{data: auth}] = await Promise.all([
+      sb.from("organizer_follows").select("id",{count:"exact",head:true}).eq("organizer_id",userId),
+      sb.auth.getUser()
+    ]);
+    const viewerId = auth?.user?.id || null;
+    let isFollowing = false;
+    if (viewerId && viewerId !== userId) {
+      const {data: relation} = await sb.from("organizer_follows").select("id").eq("organizer_id",userId).eq("follower_id",viewerId).maybeSingle();
+      isFollowing = !!relation;
+    }
     const events = Array.from(publishedEventDetails.values()).filter(ev => String(ev.organizer_id) === String(userId));
     $("organizerProfileTitle").textContent = profile.business_name || "ORGANIZER";
     const logo = profile.logo_url ? '<img src="'+safe(profile.logo_url)+'" alt="'+safe(profile.business_name)+' logo" style="width:88px;height:88px;object-fit:cover;border-radius:22px;margin:12px 0">' : '<div class="organizer-avatar large">'+safe((profile.business_name||"S").trim().charAt(0).toUpperCase())+'</div>';
+    const followControl = viewerId === userId ? '<span class="note">YOUR ORGANIZER PROFILE</span>' : '<button class="primary" type="button" data-follow-organizer="'+safe(userId)+'" data-following="'+(isFollowing?'true':'false')+'" style="margin:14px 0">'+(isFollowing?'FOLLOWING ✓':'＋ FOLLOW')+'</button>';
+    const stats = '<div style="display:flex;gap:24px;flex-wrap:wrap;margin:12px 0"><span><b id="organizerFollowerCount">'+(countError?'—':Number(followerCount||0).toLocaleString())+'</b> <span class="note">FOLLOWERS</span></span><span><b>'+events.length+'</b> <span class="note">EVENTS</span></span></div>';
     const list = events.length ? events.map(ev => '<button class="organizer-event" type="button" data-profile-event="'+safe(ev.id)+'">'+(ev.image_url?'<img src="'+safe(ev.image_url)+'" alt="" loading="lazy">':'<span class="organizer-event-placeholder">ST★R</span>')+'<span><b>'+safe(ev.title)+'</b><small>'+(ev.event_date?safe(new Date(ev.event_date).toLocaleDateString()):"Date TBA")+'</small></span><span>→</span></button>').join("") : '<p class="note">No other published events yet.</p>';
-    content.innerHTML = logo+'<h3 style="margin:8px 0">'+safe(profile.business_name)+'</h3><p style="line-height:1.7;white-space:pre-wrap">'+safe(profile.description || "This is a StarGates organizer. Check back for more events and updates.")+'</p><h4 style="margin:24px 0 10px">PUBLISHED EVENTS</h4>'+list;
+    content.innerHTML = '<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">'+logo+'<div style="flex:1;min-width:150px"><h3 style="margin:8px 0">'+safe(profile.business_name)+'</h3>'+stats+followControl+'</div></div><p style="line-height:1.7;white-space:pre-wrap">'+safe(profile.description || "This is a StarGates organizer. Check back for more events and updates.")+'</p><h4 style="margin:24px 0 10px">PUBLISHED EVENTS</h4>'+list;
+  };
+
+  window.toggleOrganizerFollow = async function(button) {
+    if (!button || !sb) return;
+    const organizerId = button.dataset.followOrganizer;
+    if (!organizerId) return;
+    const {data: auth,error: authError} = await sb.auth.getUser();
+    if (authError || !auth.user) {
+      openModal("accountModal");
+      return toast("Log in to follow organizers.");
+    }
+    if (auth.user.id === organizerId) return toast("You cannot follow your own profile.");
+    const wasFollowing = button.dataset.following === "true";
+    button.disabled = true;
+    const request = wasFollowing
+      ? sb.from("organizer_follows").delete().eq("organizer_id",organizerId).eq("follower_id",auth.user.id)
+      : sb.from("organizer_follows").insert({organizer_id:organizerId,follower_id:auth.user.id});
+    const {error} = await request;
+    if (error) {
+      button.disabled = false;
+      return toast("Couldn't update follow. Please try again.");
+    }
+    const nowFollowing = !wasFollowing;
+    button.dataset.following = nowFollowing ? "true" : "false";
+    button.textContent = nowFollowing ? "FOLLOWING ✓" : "＋ FOLLOW";
+    button.disabled = false;
+    const countNode = $("organizerFollowerCount");
+    if (countNode) {
+      const current = Number(countNode.textContent.replace(/,/g,"")) || 0;
+      countNode.textContent = Math.max(0,current + (nowFollowing ? 1 : -1)).toLocaleString();
+    }
+    toast(nowFollowing ? "You're now following this organizer." : "You unfollowed this organizer.");
   };
   $("eventDetailContent")?.addEventListener("click", event => {
     const button = event.target.closest("[data-open-organizer]");
     if (button) window.openOrganizerPublicProfile(button.dataset.openOrganizer);
   });
   $("organizerProfileContent")?.addEventListener("click", event => {
+    const followButton = event.target.closest("[data-follow-organizer]");
+    if (followButton) {
+      window.toggleOrganizerFollow(followButton);
+      return;
+    }
     const button = event.target.closest("[data-profile-event]");
     if (!button) return;
     const eventId = button.dataset.profileEvent;
