@@ -372,8 +372,8 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const { data, error } = await sb.from("events")
       .select("id,organizer_id,title,description,category,location,image_url,trailer_url,event_date,status,ticket_types(name,price,quantity,image_url)")
       .eq("status","published").order("event_date");
-    if (error) { console.error("StarGates events:",error); grid.innerHTML = "<p class='note'>Events are temporarily unavailable. Please try again later.</p>"; return; }
-    if (!data?.length) { grid.innerHTML = "<p class='note'>No events have been published yet. Check back soon.</p>"; return; }
+    if (error) { console.error("StarGates events:",error); if ($("spotlightSection")) $("spotlightSection").hidden = true; grid.innerHTML = "<p class='note'>Events are temporarily unavailable. Please try again later.</p>"; return; }
+    if (!data?.length) { if ($("spotlightSection")) $("spotlightSection").hidden = true; grid.innerHTML = "<p class='note'>No events have been published yet. Check back soon.</p>"; return; }
     const uniqueEvents = new Map();
     data.forEach(ev => {
       const day = ev.event_date ? new Date(ev.event_date).toISOString().slice(0,10) : "no-date";
