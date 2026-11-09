@@ -83,8 +83,21 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 .gallery-manage-item img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px}
 .gallery-manage-item button{width:100%;margin-top:6px;padding:7px;font-size:9px}
 
+/* StarGates nearby maps */
+.nearby-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.nearby-actions button{white-space:nowrap}
+.nearby-map-panel{margin:18px 0 24px;padding:14px;border:1px solid #343a2d;border-radius:18px;background:#0b0d09}
+.nearby-map-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px}.nearby-map-heading b{font-size:12px;letter-spacing:1.5px;color:var(--lime)}
+.nearby-map-status,.map-attribution-note{font-size:11px;color:#929887;line-height:1.5;margin:8px 0}
+#nearbyEventsMap{height:360px;width:100%;border-radius:12px;overflow:hidden;background:#151912}
+.event-distance{display:inline-flex;margin-top:8px;padding:5px 9px;border:1px solid #4c5d32;border-radius:999px;color:var(--lime);font-size:10px;font-weight:800;letter-spacing:.3px}
+.sg-map-pin{background:#c7ff4a;border:2px solid #10130b;border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 3px 12px #0009}.sg-map-pin span{display:grid;place-items:center;height:100%;transform:rotate(45deg);font-size:14px;font-weight:900;color:#10130b}
+.event-pin-controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px}.event-pin-controls .note{margin:0}
+#orgPinMapWrap{padding:12px;border:1px solid #333;border-radius:14px;background:#0c0e0a;margin-top:10px}#orgPinMap{height:300px;border-radius:10px;overflow:hidden;background:#151912}
+@media(max-width:650px){.nearby-actions{width:100%}.nearby-actions button{flex:1;padding:11px 12px;font-size:11px}#nearbyEventsMap{height:300px}.nearby-map-panel{padding:10px}}
 </style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="" defer></script>
 </head>
 <body>
 <header>
@@ -124,8 +137,9 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 
 <section id="events">
   <div class="head"><div><div class="kicker">DISCOVER</div><h2>EVENTS.</h2></div><p>Music, parties, shows, sports and more. Pick a night and get moving.</p></div>
-  <div class="discovery-tools"><div class="event-search"><input id="eventSearch" type="search" placeholder="Search events, venues or descriptions..." aria-label="Search events"></div><label class="sort-control">SORT BY <select id="eventSort" aria-label="Sort events"><option value="soonest">Soonest</option><option value="price-low">Lowest price</option><option value="price-high">Highest price</option></select></label></div>
+  <div class="discovery-tools"><div class="event-search"><input id="eventSearch" type="search" placeholder="Search events, venues or descriptions..." aria-label="Search events"></div><label class="sort-control">SORT BY <select id="eventSort" aria-label="Sort events"><option value="soonest">Soonest</option><option value="price-low">Lowest price</option><option value="price-high">Highest price</option><option value="nearest" disabled>Nearest</option></select></label><div class="nearby-actions"><button class="secondary" type="button" onclick="findEventsNearMe()">⌖ EVENTS NEAR ME</button><button class="secondary" id="nearbyMapToggle" type="button" onclick="toggleNearbyMap()">VIEW MAP</button></div></div>
   <div class="filters"><button class="filter active" onclick="filterEvents('all',this)">All</button><button class="filter" onclick="filterEvents('music',this)">Music</button><button class="filter" onclick="filterEvents('parties',this)">Parties</button><button class="filter" onclick="filterEvents('sports',this)">Sports</button><button class="filter" onclick="filterEvents('other',this)">Other</button></div>
+  <div class="nearby-map-panel" id="nearbyMapPanel" hidden><div class="nearby-map-heading"><b>✦ EXPLORE EVENT LOCATIONS</b><span class="note">LIVE PINS</span></div><p class="nearby-map-status" id="nearbyMapStatus">Map pins appear when organisers add an exact venue location. Your location is only requested when you tap Events Near Me.</p><div id="nearbyEventsMap" role="region" aria-label="Map of published event locations"></div><p class="map-attribution-note">Map data © OpenStreetMap contributors. Distances are straight-line estimates, not driving distances.</p></div>
   <div class="grid" id="eventGrid" aria-live="polite">
     <div class="event-loading"><span class="loading-orbit"></span><b>Finding your next experience</b><small>Loading published events…</small></div>
     <div class="event-loading"><span class="loading-orbit"></span><b>Fresh plans are on the way</b><small>Checking the latest listings…</small></div>
@@ -177,7 +191,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 </div></div>
 
 <div class="modal" id="orgModal" onclick="if(event.target===this)closeModal('orgModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">ORGANIZER</div><h3 id="orgModalHeading">CREATE EVENT.</h3></div><button class="close" onclick="closeModal('orgModal')">×</button></div>
-  <div class="form"><label>Event name<input id="orgName" placeholder="e.g. Summer Festival"></label><label>Category<select id="orgCat"><option>Music</option><option>Parties</option><option>Sports</option><option>Other</option></select></label><label>Date<input id="orgDate" type="date"></label><label>Venue<input id="orgVenue" placeholder="Venue / location"></label><label>Description<textarea id="orgDesc" placeholder="Tell people what makes your event worth attending."></textarea></label><label>Event cover photo<input id="orgCover" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><label>Event gallery photos (optional)<input id="orgGallery" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><small class="note">Up to 8 extra photos · JPG, PNG, WebP or GIF · 10 MB each</small></label><div id="orgGalleryExisting" class="gallery-manage-grid"></div><label>Event trailer video<input id="orgVideo" type="file" accept="video/mp4,video/webm"><small class="note">MP4 or WebM · Maximum 50 MB</small></label><label>Or paste a video URL (optional)<input id="orgTrailer" type="url" placeholder="https://..."></label><label>Ticket types — add artwork to each ticket</label><div id="ticketTypeRows"><div class="ticket-type-row" style="border:1px solid #333;border-radius:14px;padding:12px;display:grid;gap:9px"><input class="ticket-type-name" placeholder="Ticket name — e.g. Early Bird"><input class="ticket-type-price" type="number" min="0" step="1" placeholder="Price in KSh — e.g. 500"><input class="ticket-type-quantity" type="number" min="1" step="1" placeholder="Quantity — e.g. 100"><label>Ticket artwork (optional)<input class="ticket-type-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label></div></div><button type="button" class="secondary" onclick="addTicketType()">+ ADD ANOTHER TICKET TYPE</button><label>Your platform commission %<input id="orgCommission" type="number" min="0" max="100" placeholder="5"></label><button id="orgSubmitButton" class="primary" onclick="publishEvent()">PUBLISH EVENT</button></div>
+  <div class="form"><label>Event name<input id="orgName" placeholder="e.g. Summer Festival"></label><label>Category<select id="orgCat"><option>Music</option><option>Parties</option><option>Sports</option><option>Other</option></select></label><label>Date<input id="orgDate" type="date"></label><label>Venue<input id="orgVenue" placeholder="Venue / location"></label><div class="event-pin-controls"><button type="button" class="secondary" onclick="toggleOrganizerPinMap()">📍 PIN VENUE ON MAP</button><button type="button" class="secondary" onclick="useOrganizerCurrentLocation()">USE MY CURRENT LOCATION</button><small class="note" id="orgPinStatus">Optional, but required for accurate distance and map pins.</small></div><input type="hidden" id="orgLatitude"><input type="hidden" id="orgLongitude"><div id="orgPinMapWrap" hidden><p class="note">Zoom to the exact venue, then tap the map to place its pin.</p><div id="orgPinMap" role="region" aria-label="Choose event venue on map"></div></div><label>Description<textarea id="orgDesc" placeholder="Tell people what makes your event worth attending."></textarea></label><label>Event cover photo<input id="orgCover" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><label>Event gallery photos (optional)<input id="orgGallery" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><small class="note">Up to 8 extra photos · JPG, PNG, WebP or GIF · 10 MB each</small></label><div id="orgGalleryExisting" class="gallery-manage-grid"></div><label>Event trailer video<input id="orgVideo" type="file" accept="video/mp4,video/webm"><small class="note">MP4 or WebM · Maximum 50 MB</small></label><label>Or paste a video URL (optional)<input id="orgTrailer" type="url" placeholder="https://..."></label><label>Ticket types — add artwork to each ticket</label><div id="ticketTypeRows"><div class="ticket-type-row" style="border:1px solid #333;border-radius:14px;padding:12px;display:grid;gap:9px"><input class="ticket-type-name" placeholder="Ticket name — e.g. Early Bird"><input class="ticket-type-price" type="number" min="0" step="1" placeholder="Price in KSh — e.g. 500"><input class="ticket-type-quantity" type="number" min="1" step="1" placeholder="Quantity — e.g. 100"><label>Ticket artwork (optional)<input class="ticket-type-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label></div></div><button type="button" class="secondary" onclick="addTicketType()">+ ADD ANOTHER TICKET TYPE</button><label>Your platform commission %<input id="orgCommission" type="number" min="0" max="100" placeholder="5"></label><button id="orgSubmitButton" class="primary" onclick="publishEvent()">PUBLISH EVENT</button></div>
   <div class="note">Demo organizer flow. Production version saves this event to a database and publishes it to the marketplace.</div>
 </div></div>
 
@@ -203,6 +217,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   const state = { eventName: "", earlyPrice: 0, regularPrice: 0, earlyQty: 0, regularQty: 0 };
   let selectedEventCategory = "all";
   let publishedEventDetails = new Map();
+  let customerEventMap = null, customerEventMarkers = null, organizerPinMap = null, organizerPinMarker = null, customerCoordinates = null;
   let toastTimer;
   let eventSubmitInProgress = false;
   const actionLocks = new Set();
@@ -255,6 +270,8 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (!profile || !["organizer","admin"].includes(profile.role)) {
       openModal("applyModal"); return toast("Apply to host first. Organiser access requires approval.");
     }
+    $("orgLatitude").value="";$("orgLongitude").value="";$("orgPinStatus").textContent="Optional, but required for accurate distance and map pins.";$("orgPinMapWrap").hidden=true;
+    if(organizerPinMarker&&organizerPinMap){organizerPinMap.removeLayer(organizerPinMarker);organizerPinMarker=null;}
     openModal("orgModal");
   };
   window.applyOrganizer = async function () {
@@ -370,7 +387,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const grid = $("eventGrid");
     if (!grid) return;
     const { data, error } = await sb.from("events")
-      .select("id,organizer_id,title,description,category,location,image_url,trailer_url,event_date,status,ticket_types(name,price,quantity,image_url)")
+      .select("id,organizer_id,title,description,category,location,latitude,longitude,image_url,trailer_url,event_date,status,ticket_types(name,price,quantity,image_url)")
       .eq("status","published").order("event_date");
     if (error) { console.error("StarGates events:",error); if ($("spotlightSection")) $("spotlightSection").hidden = true; grid.innerHTML = "<p class='note'>Events are temporarily unavailable. Please try again later.</p>"; return; }
     if (!data?.length) { if ($("spotlightSection")) $("spotlightSection").hidden = true; grid.innerHTML = "<p class='note'>No events have been published yet. Check back soon.</p>"; return; }
@@ -397,9 +414,10 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
         : '<div class="meta">Ticket details coming soon</div>';
       const priceLabel = lowestPrice === null ? "Price TBA" : "From KSh "+lowestPrice.toLocaleString("en-KE");
       const poster = ev.image_url ? '<img class="event-poster-image" src="'+escapeHtml(ev.image_url)+'" alt="'+escapeHtml(ev.title)+' event poster" loading="lazy">' : '<div class="mark">ST★R</div>';
-      return '<article class="card event-card" data-event-id="'+escapeHtml(ev.id)+'" data-cat="'+cat+'" data-date="'+(ev.event_date ? new Date(ev.event_date).getTime() : '')+'" data-price="'+(lowestPrice === null ? '':lowestPrice)+'" data-search="'+escapeHtml([ev.title,ev.description,ev.location].join(" ")).toLowerCase()+'" role="button" tabindex="0" aria-label="View details for '+escapeHtml(ev.title)+'" onclick="openEventDetails(this.dataset.eventId)"><div class="poster">'+poster+'</div><div class="body"><h3>'+escapeHtml(ev.title)+'</h3><div class="meta">📅 '+escapeHtml(date)+'<br>📍 '+escapeHtml(ev.location || "Venue TBA")+'</div><div class="price">'+priceLabel+'</div><button class="primary event-view-button" type="button">EXPLORE EVENT →</button></div></article>';
+      return '<article class="card event-card" data-event-id="'+escapeHtml(ev.id)+'" data-cat="'+cat+'" data-date="'+(ev.event_date ? new Date(ev.event_date).getTime() : '')+'" data-price="'+(lowestPrice === null ? '':lowestPrice)+'" data-distance="" data-search="'+escapeHtml([ev.title,ev.description,ev.location].join(" ")).toLowerCase()+'" role="button" tabindex="0" aria-label="View details for '+escapeHtml(ev.title)+'" onclick="openEventDetails(this.dataset.eventId)"><div class="poster">'+poster+'</div><div class="body"><h3>'+escapeHtml(ev.title)+'</h3><div class="meta">📅 '+escapeHtml(date)+'<br>📍 '+escapeHtml(ev.location || "Venue TBA")+'</div><div class="event-distance" data-distance-for="'+escapeHtml(ev.id)+'" hidden></div><div class="price">'+priceLabel+'</div><button class="primary event-view-button" type="button">EXPLORE EVENT →</button></div></article>';
     }).join("");
-    applyEventFilters();
+    updateEventDistances();applyEventFilters();
+    if(customerEventMap&&$("nearbyMapPanel")&&!$("nearbyMapPanel").hidden)renderNearbyEventMap();
     const requestedEvent = new URLSearchParams(window.location.search).get("event");
     if (requestedEvent && publishedEventDetails.has(String(requestedEvent))) openEventDetails(requestedEvent);
   }
@@ -792,6 +810,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       const bp = b.dataset.price === "" ? Number.MAX_SAFE_INTEGER : Number(b.dataset.price);
       if (sort === "price-low") return ap - bp || ad - bd;
       if (sort === "price-high") return bp - ap || ad - bd;
+      if(sort==="nearest"){const ax=a.dataset.distance===""?Number.MAX_SAFE_INTEGER:Number(a.dataset.distance),bx=b.dataset.distance===""?Number.MAX_SAFE_INTEGER:Number(b.dataset.distance);return ax-bx||ad-bd;}
       return ad - bd;
     });
     cards.forEach(card => grid.appendChild(card));
@@ -805,6 +824,69 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const empty = $("eventSearchEmpty");
     if (empty) empty.hidden = cards.length === 0 || visible > 0;
   }
+  function calculateDistanceKm(lat1,lon1,lat2,lon2){const r=v=>v*Math.PI/180,dLat=r(lat2-lat1),dLon=r(lon2-lon1),a=Math.sin(dLat/2)**2+Math.cos(r(lat1))*Math.cos(r(lat2))*Math.sin(dLon/2)**2;return 6371*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
+  function formatDistanceKm(d){return d<1?Math.max(50,Math.round(d*1000/50)*50)+" m away":d.toFixed(1)+" km away";}
+  function updateEventDistances(){
+    const opt=$("eventSort")?.querySelector('option[value="nearest"]');if(opt)opt.disabled=!customerCoordinates;
+    document.querySelectorAll("#eventGrid .event-card").forEach(card=>{
+      const ev=publishedEventDetails.get(String(card.dataset.eventId)),label=card.querySelector("[data-distance-for]");
+      if(!customerCoordinates||!label){if(label)label.hidden=true;card.dataset.distance="";return;}
+      if(ev?.latitude!=null&&ev?.longitude!=null){const d=calculateDistanceKm(customerCoordinates.lat,customerCoordinates.lng,Number(ev.latitude),Number(ev.longitude));card.dataset.distance=String(d);label.textContent="📍 "+formatDistanceKm(d);label.hidden=false;}
+      else{card.dataset.distance="";label.textContent="📍 Venue pin not added";label.hidden=false;}
+    });
+  }
+  function initCustomerEventMap(){
+    if(customerEventMap)return true;if(!window.L)return false;
+    customerEventMap=L.map("nearbyEventsMap",{scrollWheelZoom:false}).setView([-1.286389,36.817223],6);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(customerEventMap);
+    customerEventMarkers=L.layerGroup().addTo(customerEventMap);return true;
+  }
+  function renderNearbyEventMap(){
+    const status=$("nearbyMapStatus");if(!initCustomerEventMap()){if(status)status.textContent="The map library could not load. Check your connection and refresh.";return;}
+    customerEventMarkers.clearLayers();const bounds=[],events=Array.from(publishedEventDetails.values());let pinned=0;
+    const safe=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    events.forEach(ev=>{if(ev.latitude==null||ev.longitude==null)return;const lat=Number(ev.latitude),lng=Number(ev.longitude);if(!Number.isFinite(lat)||!Number.isFinite(lng))return;pinned++;
+      const d=customerCoordinates?calculateDistanceKm(customerCoordinates.lat,customerCoordinates.lng,lat,lng):null;
+      const popup='<div class="sg-map-popup"><b>'+safe(ev.title)+'</b><br><span>'+safe(ev.location||"Venue TBA")+'</span>'+(d!=null?'<br><small>'+formatDistanceKm(d)+'</small>':'')+'<br><button type="button" onclick="openEventDetails('+JSON.stringify(String(ev.id))+')">VIEW EVENT</button></div>';
+      L.marker([lat,lng],{icon:L.divIcon({className:"sg-map-pin",html:"<span>✦</span>",iconSize:[32,32],iconAnchor:[16,30]})}).bindPopup(popup).addTo(customerEventMarkers);bounds.push([lat,lng]);
+    });
+    if(customerCoordinates){L.circleMarker([customerCoordinates.lat,customerCoordinates.lng],{radius:8,color:"#fff",weight:3,fillColor:"#258cff",fillOpacity:1}).bindPopup("Your current location (only on this device)").addTo(customerEventMarkers);bounds.push([customerCoordinates.lat,customerCoordinates.lng]);}
+    if(bounds.length>1)customerEventMap.fitBounds(bounds,{padding:[28,28],maxZoom:13});else if(bounds.length===1)customerEventMap.setView(bounds[0],13);else customerEventMap.setView([-1.286389,36.817223],6);
+    if(status)status.textContent=!pinned?"No event pins have been added yet. Organisers can edit their events and pin the exact venue.":"Showing "+pinned+" published event location(s). "+(customerCoordinates?"Distances are straight-line estimates from your current location.":"Tap EVENTS NEAR ME to see distances from you.");
+    setTimeout(()=>customerEventMap?.invalidateSize(),120);
+  }
+  window.toggleNearbyMap=function(){const panel=$("nearbyMapPanel"),button=$("nearbyMapToggle");if(!panel)return;panel.hidden=!panel.hidden;if(button)button.textContent=panel.hidden?"VIEW MAP":"HIDE MAP";if(!panel.hidden)renderNearbyEventMap();};
+  window.findEventsNearMe=function(){
+    const panel=$("nearbyMapPanel"),status=$("nearbyMapStatus");if(panel)panel.hidden=false;if($("nearbyMapToggle"))$("nearbyMapToggle").textContent="HIDE MAP";
+    if(!navigator.geolocation){if(status)status.textContent="Location is not supported by this browser. You can still explore event pins on the map.";renderNearbyEventMap();return;}
+    if(status)status.textContent="Requesting your location… Your location is not saved to your StarGates account.";
+    navigator.geolocation.getCurrentPosition(position=>{
+      customerCoordinates={lat:position.coords.latitude,lng:position.coords.longitude};updateEventDistances();if($("eventSort"))$("eventSort").value="nearest";applyEventFilters();renderNearbyEventMap();
+      if(status)status.textContent="Location found. Events are now sorted by straight-line distance. Your location stays on this device.";
+    },error=>{const message=error.code===1?"Location permission was denied. Allow location access in your browser settings to see distances.":error.code===2?"Your location could not be determined. Try again in a moment.":"Location request timed out. Please try again.";if(status)status.textContent=message+" You can still browse the event map.";renderNearbyEventMap();},{enableHighAccuracy:false,timeout:15000,maximumAge:300000});
+  };
+  function initOrganizerPinMap(){
+    if(organizerPinMap)return true;if(!window.L)return false;
+    organizerPinMap=L.map("orgPinMap").setView([-1.286389,36.817223],6);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(organizerPinMap);
+    organizerPinMap.on("click",e=>setOrganizerVenuePin(e.latlng.lat,e.latlng.lng));return true;
+  }
+  function setOrganizerVenuePin(lat,lng){
+    $("orgLatitude").value=Number(lat).toFixed(6);$("orgLongitude").value=Number(lng).toFixed(6);$("orgPinStatus").textContent="Venue pin set: "+Number(lat).toFixed(5)+", "+Number(lng).toFixed(5);
+    if(!initOrganizerPinMap())return;if(organizerPinMarker)organizerPinMarker.setLatLng([lat,lng]);else organizerPinMarker=L.marker([lat,lng]).addTo(organizerPinMap);
+  }
+  window.toggleOrganizerPinMap=function(){
+    const wrap=$("orgPinMapWrap");if(!wrap)return;wrap.hidden=!wrap.hidden;if(wrap.hidden)return;
+    if(!initOrganizerPinMap()){toast("Map library could not load. Check your connection.");return;}
+    const lat=Number($("orgLatitude").value),lng=Number($("orgLongitude").value);
+    if($("orgLatitude").value!==""&&$("orgLongitude").value!==""){organizerPinMap.setView([lat,lng],15);if(organizerPinMarker)organizerPinMarker.setLatLng([lat,lng]);else organizerPinMarker=L.marker([lat,lng]).addTo(organizerPinMap);}else organizerPinMap.setView([-1.286389,36.817223],6);
+    setTimeout(()=>organizerPinMap?.invalidateSize(),120);
+  };
+  window.useOrganizerCurrentLocation=function(){
+    if(!navigator.geolocation)return toast("Location is not supported by this browser.");toast("Finding your current location…");
+    navigator.geolocation.getCurrentPosition(position=>{$("orgPinMapWrap").hidden=false;if(!initOrganizerPinMap())return toast("Map library could not load.");setOrganizerVenuePin(position.coords.latitude,position.coords.longitude);organizerPinMap.setView([position.coords.latitude,position.coords.longitude],16);setTimeout(()=>organizerPinMap?.invalidateSize(),120);},error=>toast(error.code===1?"Location permission was denied. You can pin the venue manually.":"Could not get your location. Try pinning the venue manually."),{enableHighAccuracy:false,timeout:15000,maximumAge:300000});
+  };
+
   window.filterEvents = function (category, button) {
     selectedEventCategory = category;
     document.querySelectorAll(".filters .filter").forEach((el) =>
@@ -863,13 +945,15 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   window.openEditEvent = async function (eventId) {
     if (!sb) return toast("Database connection unavailable.");
     const {data:auth}=await sb.auth.getUser(); if(!auth.user)return toast("Log in first.");
-    const {data:event,error}=await sb.from("events").select("id,organizer_id,title,description,category,location,trailer_url,event_date,status,is_banned").eq("id",eventId).eq("organizer_id",auth.user.id).maybeSingle();
+    const {data:event,error}=await sb.from("events").select("id,organizer_id,title,description,category,location,latitude,longitude,trailer_url,event_date,status,is_banned").eq("id",eventId).eq("organizer_id",auth.user.id).maybeSingle();
     if(error||!event)return toast("You can only edit events you created.");
     if(event.is_banned||event.status==="banned")return toast("This event is banned. Contact StarGates admin.");
     editingEventId=event.id;
     $("orgName").value=event.title||"";$("orgCat").value=({music:"Music",parties:"Parties",sports:"Sports",other:"Other"})[String(event.category||"").toLowerCase()]||"Other";
     $("orgDate").value=event.event_date?new Date(event.event_date).toISOString().slice(0,10):"";
     $("orgVenue").value=event.location||"";$("orgDesc").value=event.description||"";$("orgTrailer").value=event.trailer_url||"";
+    $("orgLatitude").value=event.latitude??"";$("orgLongitude").value=event.longitude??"";
+    $("orgPinStatus").textContent=event.latitude!=null&&event.longitude!=null?"Venue pin saved. You can move it on the map.":"No venue pin saved yet.";$("orgPinMapWrap").hidden=true;
     $("orgCover").value="";$("orgVideo").value="";$("orgGallery").value="";$("orgGalleryExisting").innerHTML="<p class=note>Loading existing gallery…</p>";$("orgCommission").value="";
     const {data:ticketRows,error:ticketLoadError}=await sb.from("ticket_types").select("id,name,price,quantity,image_url").eq("event_id",event.id).order("created_at");
     if(ticketLoadError)return toast("Could not load this event's ticket types: "+ticketLoadError.message);
@@ -895,7 +979,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       if(current.is_banned||current.status==="banned")throw new Error("This event is banned. Contact StarGates admin.");
       const uploadMedia=async(file,label)=>{if(!file)return null;if(!["image/jpeg","image/png","image/webp","image/gif","video/mp4","video/webm"].includes(file.type))throw new Error("Unsupported "+label+" file type.");if(file.size>50*1024*1024)throw new Error(label+" must be 50 MB or smaller.");const ext=(file.name.split(".").pop()||"bin").toLowerCase().replace(/[^a-z0-9]/g,"");const path=auth.user.id+"/"+editingEventId+"/"+label+"-"+Date.now()+"."+ext;const {data,error}=await sb.storage.from("event-media").upload(path,file,{contentType:file.type,upsert:false});if(error)throw error;return sb.storage.from("event-media").getPublicUrl(data.path).data.publicUrl;};
       const cover=await uploadMedia($("orgCover")?.files?.[0],"event-cover"),video=await uploadMedia($("orgVideo")?.files?.[0],"event-trailer");
-      const patch={title:name,description:$("orgDesc")?.value.trim()||"",category:String($("orgCat")?.value||"Other").toLowerCase(),location:venue,event_date:new Date(date+"T20:00:00").toISOString()};
+      const patch={title:name,description:$("orgDesc")?.value.trim()||"",category:String($("orgCat")?.value||"Other").toLowerCase(),location:venue,event_date:new Date(date+"T20:00:00").toISOString(),latitude:$("orgLatitude")?.value===""?null:Number($("orgLatitude").value),longitude:$("orgLongitude")?.value===""?null:Number($("orgLongitude").value)};
       if(cover)patch.image_url=cover;if(video)patch.trailer_url=video;else if($("orgTrailer")?.value.trim())patch.trailer_url=$("orgTrailer").value.trim();
       if(current.status==="published")patch.status="draft";
       const {error:updateError}=await sb.from("events").update(patch).eq("id",editingEventId).eq("organizer_id",auth.user.id);if(updateError)throw updateError;
@@ -983,6 +1067,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
         organizer_id: userData.user.id, title: name, description: $("orgDesc")?.value.trim() || "",
         category: String($("orgCat")?.value || "Other").toLowerCase(),
         location: venue, event_date: eventDate,
+        latitude:$("orgLatitude")?.value===""?null:Number($("orgLatitude").value),longitude:$("orgLongitude")?.value===""?null:Number($("orgLongitude").value),
         trailer_url: $("orgTrailer")?.value.trim() || null, status: "draft",
         commission_percent: commission
       }).select("id").single();
