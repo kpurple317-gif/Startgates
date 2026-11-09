@@ -122,8 +122,8 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   <button class="primary" style="width:100%;margin-top:12px" onclick="toast('Email delivery will happen automatically after the real payment backend is connected.')">SEND TO EMAIL</button>
 </div></div>
 
-<div class="modal" id="orgModal" onclick="if(event.target===this)closeModal('orgModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">ORGANIZER</div><h3>CREATE EVENT.</h3></div><button class="close" onclick="closeModal('orgModal')">×</button></div>
-  <div class="form"><label>Event name<input id="orgName" placeholder="e.g. Summer Festival"></label><label>Category<select id="orgCat"><option>Music</option><option>Parties</option><option>Sports</option><option>Other</option></select></label><label>Date<input id="orgDate" type="date"></label><label>Venue<input id="orgVenue" placeholder="Venue / location"></label><label>Description<textarea id="orgDesc" placeholder="Tell people what makes your event worth attending."></textarea></label><label>Event cover photo<input id="orgCover" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><label>Event trailer video<input id="orgVideo" type="file" accept="video/mp4,video/webm"><small class="note">MP4 or WebM · Maximum 50 MB</small></label><label>Or paste a video URL (optional)<input id="orgTrailer" type="url" placeholder="https://..."></label><label>Ticket types — add artwork to each ticket</label><div id="ticketTypeRows"><div class="ticket-type-row" style="border:1px solid #333;border-radius:14px;padding:12px;display:grid;gap:9px"><input class="ticket-type-name" placeholder="Ticket name — e.g. Early Bird"><input class="ticket-type-price" type="number" min="0" step="1" placeholder="Price in KSh — e.g. 500"><input class="ticket-type-quantity" type="number" min="1" step="1" placeholder="Quantity — e.g. 100"><label>Ticket artwork (optional)<input class="ticket-type-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label></div></div><button type="button" class="secondary" onclick="addTicketType()">+ ADD ANOTHER TICKET TYPE</button><label>Your platform commission %<input id="orgCommission" type="number" min="0" max="100" placeholder="5"></label><button class="primary" onclick="publishEvent()">PUBLISH EVENT</button></div>
+<div class="modal" id="orgModal" onclick="if(event.target===this)closeModal('orgModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">ORGANIZER</div><h3 id="orgModalHeading">CREATE EVENT.</h3></div><button class="close" onclick="closeModal('orgModal')">×</button></div>
+  <div class="form"><label>Event name<input id="orgName" placeholder="e.g. Summer Festival"></label><label>Category<select id="orgCat"><option>Music</option><option>Parties</option><option>Sports</option><option>Other</option></select></label><label>Date<input id="orgDate" type="date"></label><label>Venue<input id="orgVenue" placeholder="Venue / location"></label><label>Description<textarea id="orgDesc" placeholder="Tell people what makes your event worth attending."></textarea></label><label>Event cover photo<input id="orgCover" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><label>Event trailer video<input id="orgVideo" type="file" accept="video/mp4,video/webm"><small class="note">MP4 or WebM · Maximum 50 MB</small></label><label>Or paste a video URL (optional)<input id="orgTrailer" type="url" placeholder="https://..."></label><label>Ticket types — add artwork to each ticket</label><div id="ticketTypeRows"><div class="ticket-type-row" style="border:1px solid #333;border-radius:14px;padding:12px;display:grid;gap:9px"><input class="ticket-type-name" placeholder="Ticket name — e.g. Early Bird"><input class="ticket-type-price" type="number" min="0" step="1" placeholder="Price in KSh — e.g. 500"><input class="ticket-type-quantity" type="number" min="1" step="1" placeholder="Quantity — e.g. 100"><label>Ticket artwork (optional)<input class="ticket-type-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label></div></div><button type="button" class="secondary" onclick="addTicketType()">+ ADD ANOTHER TICKET TYPE</button><label>Your platform commission %<input id="orgCommission" type="number" min="0" max="100" placeholder="5"></label><button id="orgSubmitButton" class="primary" onclick="publishEvent()">PUBLISH EVENT</button></div>
   <div class="note">Demo organizer flow. Production version saves this event to a database and publishes it to the marketplace.</div>
 </div></div>
 
@@ -560,7 +560,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       await Promise.all([loadAdminEventReviews(), loadAdminModeration(), loadAdminApplications(), loadAdminUsers()]);
     }
     const { data: events, error } = await sb.from("events")
-      .select("id,title,status,event_date,location,ticket_types(name,price,quantity)")
+      .select("id,title,status,event_date,location,description,category,image_url,trailer_url,ticket_types(name,price,quantity)")
       .eq("organizer_id",auth.user.id).order("created_at",{ascending:false});
     if (error) { if(panel) panel.innerHTML = "<h3>My Events</h3><p class='note'>Could not load your events.</p>"; return; }
     if ($("activeEvents")) $("activeEvents").textContent = String(events?.filter(e=>e.status==="published").length || 0);
@@ -576,7 +576,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       }
     });
     const compactEvents = Array.from(myEventGroups.values());
-    if (panel) panel.innerHTML = "<h3>My Events</h3>" + (["organizer","admin"].includes(profile?.role) ? "<button class='primary' style='margin:10px 0 16px' onclick='openOrganizer()'>+ CREATE ANOTHER EVENT</button>" : "") + (compactEvents.length ? compactEvents.map(e=>"<div class='ticket'><div><b>"+String(e.title).replace(/[&<>"]/g,"")+"</b><small>"+e.status.toUpperCase()+" · "+(e.event_date?new Date(e.event_date).toLocaleDateString():"Date TBA")+(e.duplicateCount>1?" · "+e.duplicateCount+" repeated submissions grouped":"")+"</small></div></div>").join("") : "<p class='note'>No events submitted yet. Apply to host and submit your first event.</p>") + "<button class='secondary' onclick='signOut()'>LOG OUT</button>";
+    if (panel) panel.innerHTML = "<h3>My Events</h3>" + (["organizer","admin"].includes(profile?.role) ? "<button class='primary' style='margin:10px 0 16px' onclick='openOrganizer()'>+ CREATE ANOTHER EVENT</button>" : "") + (compactEvents.length ? compactEvents.map(e=>"<div class='ticket' style='display:flex;align-items:center;justify-content:space-between;gap:10px'><div><b>"+String(e.title).replace(/[&<>"]/g,"")+"</b><small>"+e.status.toUpperCase()+" · "+(e.event_date?new Date(e.event_date).toLocaleDateString():"Date TBA")+(e.duplicateCount>1?" · "+e.duplicateCount+" repeated submissions grouped":"")+"</small></div><button class='secondary' type='button' onclick='openEditEvent("+JSON.stringify(e.id)+")'>EDIT</button></div>").join("") : "<p class='note'>No events submitted yet. Apply to host and submit your first event.</p>") + "<button class='secondary' onclick='signOut()'>LOG OUT</button>";
     const { data: application } = await sb.from("organizer_applications").select("status").eq("user_id",auth.user.id).maybeSingle();
     if ($("applyMessage") && application) $("applyMessage").textContent = "Application status: "+application.status;
   }
@@ -681,6 +681,41 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     rows.appendChild(row);
   };
 
+  let editingEventId = null;
+  window.openEditEvent = async function (eventId) {
+    if (!sb) return toast("Database connection unavailable.");
+    const {data:auth}=await sb.auth.getUser(); if(!auth.user)return toast("Log in first.");
+    const {data:event,error}=await sb.from("events").select("id,organizer_id,title,description,category,location,trailer_url,event_date,status,is_banned").eq("id",eventId).eq("organizer_id",auth.user.id).maybeSingle();
+    if(error||!event)return toast("You can only edit events you created.");
+    if(event.is_banned||event.status==="banned")return toast("This event is banned. Contact StarGates admin.");
+    editingEventId=event.id;
+    $("orgName").value=event.title||"";$("orgCat").value=({music:"Music",parties:"Parties",sports:"Sports",other:"Other"})[String(event.category||"").toLowerCase()]||"Other";
+    $("orgDate").value=event.event_date?new Date(event.event_date).toISOString().slice(0,10):"";
+    $("orgVenue").value=event.location||"";$("orgDesc").value=event.description||"";$("orgTrailer").value=event.trailer_url||"";
+    $("orgCover").value="";$("orgVideo").value="";$("orgCommission").value="";
+    $("ticketTypeRows").innerHTML="<p class='note'>Existing ticket types and prices stay unchanged when editing event details.</p>";
+    $("orgModalHeading").textContent="EDIT EVENT.";$("orgSubmitButton").textContent="SAVE CHANGES";$("orgSubmitButton").onclick=saveEventEdit;openModal("orgModal");
+  };
+  window.saveEventEdit = async function () {
+    if(eventSubmitInProgress)return toast("Please wait for the current save to finish.");
+    const button=$("orgSubmitButton"),name=$("orgName")?.value.trim()||"",date=$("orgDate")?.value||"",venue=$("orgVenue")?.value.trim()||"";
+    if(!name||!date||!venue)return toast("Enter the event name, date and venue.");
+    eventSubmitInProgress=true;setButtonBusy(button,true,"SAVING CHANGES...");
+    try{
+      const {data:auth,error:authError}=await sb.auth.getUser();if(authError||!auth.user)throw new Error("Please log in again.");
+      const {data:current,error:checkError}=await sb.from("events").select("id,status,is_banned").eq("id",editingEventId).eq("organizer_id",auth.user.id).single();
+      if(checkError||!current)throw new Error("You can only edit events you created.");
+      if(current.is_banned||current.status==="banned")throw new Error("This event is banned. Contact StarGates admin.");
+      const uploadMedia=async(file,label)=>{if(!file)return null;if(!["image/jpeg","image/png","image/webp","image/gif","video/mp4","video/webm"].includes(file.type))throw new Error("Unsupported "+label+" file type.");if(file.size>50*1024*1024)throw new Error(label+" must be 50 MB or smaller.");const ext=(file.name.split(".").pop()||"bin").toLowerCase().replace(/[^a-z0-9]/g,"");const path=auth.user.id+"/"+editingEventId+"/"+label+"-"+Date.now()+"."+ext;const {data,error}=await sb.storage.from("event-media").upload(path,file,{contentType:file.type,upsert:false});if(error)throw error;return sb.storage.from("event-media").getPublicUrl(data.path).data.publicUrl;};
+      const cover=await uploadMedia($("orgCover")?.files?.[0],"event-cover"),video=await uploadMedia($("orgVideo")?.files?.[0],"event-trailer");
+      const patch={title:name,description:$("orgDesc")?.value.trim()||"",category:String($("orgCat")?.value||"Other").toLowerCase(),location:venue,event_date:new Date(date+"T20:00:00").toISOString()};
+      if(cover)patch.image_url=cover;if(video)patch.trailer_url=video;else if($("orgTrailer")?.value.trim())patch.trailer_url=$("orgTrailer").value.trim();
+      if(current.status==="published")patch.status="draft";
+      const {error:updateError}=await sb.from("events").update(patch).eq("id",editingEventId).eq("organizer_id",auth.user.id);if(updateError)throw updateError;
+      closeModal("orgModal");editingEventId=null;toast(current.status==="published"?"Changes saved. Your event is back in admin review.":"Event changes saved.");await loadDashboard();await loadEvents();
+    }catch(error){console.error("StarGates event edit:",error);toast("Could not save changes: "+(error.message||"Please try again."));}
+    finally{eventSubmitInProgress=false;setButtonBusy(button,false);}
+  };
   window.publishEvent = async function () {
     if (eventSubmitInProgress) return toast("Your event is already being submitted. Please wait.");
     const button = document.querySelector('#orgModal button[onclick="publishEvent()"]');
