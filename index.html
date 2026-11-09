@@ -1040,8 +1040,13 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (!section || !content || !sb) return;
     const result = await sb.from("featured_event").select("event_id").eq("slot","homepage").maybeSingle();
     if (result.error || !result.data) { section.hidden = true; return; }
-    const ev = publishedEventDetails.get(String(result.data.event_id));
-    if (!ev) { section.hidden = true; return; }
+    let ev = publishedEventDetails.get(String(result.data.event_id));
+    if (!ev) {
+      const fallback = await sb.from("events").select("id,organizer_id,title,description,category,location,image_url,trailer_url,event_date,status,ticket_types(name,price,quantity,image_url)").eq("id",result.data.event_id).eq("status","published").maybeSingle();
+      if (fallback.error || !fallback.data) { section.hidden = true; return; }
+      ev = fallback.data;
+      publishedEventDetails.set(String(ev.id),ev);
+    }
     const safe = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
     const image = ev.image_url
       ? '<img class="spotlight-image" src="' + safe(ev.image_url) + '" alt="' + safe(ev.title) + ' poster" loading="lazy">'
