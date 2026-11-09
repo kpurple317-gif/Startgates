@@ -1086,13 +1086,13 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   window.openEditEvent = async function (eventId) {
     if (!sb) return toast("Database connection unavailable.");
     const {data:auth}=await sb.auth.getUser(); if(!auth.user)return toast("Log in first.");
-    const {data:event,error}=await sb.from("events").select("id,organizer_id,title,description,category,location,latitude,longitude,trailer_url,event_date,status,is_banned").eq("id",eventId).eq("organizer_id",auth.user.id).maybeSingle();
+    const {data:event,error}=await sb.from("events").select("id,organizer_id,title,description,category,location,latitude,longitude,trailer_url,event_date,status,is_banned,flash_discount_percent,flash_starts_at,flash_ends_at").eq("id",eventId).eq("organizer_id",auth.user.id).maybeSingle();
     if(error||!event)return toast("You can only edit events you created.");
     if(event.is_banned||event.status==="banned")return toast("This event is banned. Contact StarGates admin.");
     editingEventId=event.id;
     $("orgName").value=event.title||"";$("orgCat").value=({music:"Music",parties:"Parties",sports:"Sports",other:"Other"})[String(event.category||"").toLowerCase()]||"Other";
     $("orgDate").value=event.event_date?new Date(event.event_date).toISOString().slice(0,10):"";
-    $("orgVenue").value=event.location||"";$("orgDesc").value=event.description||"";$("orgTrailer").value=event.trailer_url||"";
+    $("orgVenue").value=event.location||"";$("orgDesc").value=event.description||"";$("orgTrailer").value=event.trailer_url||"";$("orgFlashDiscount").value=event.flash_discount_percent||"";$("orgFlashStart").value=event.flash_starts_at?new Date(event.flash_starts_at).toISOString().slice(0,16):"";$("orgFlashEnd").value=event.flash_ends_at?new Date(event.flash_ends_at).toISOString().slice(0,16):"";
     $("orgLatitude").value=event.latitude??"";$("orgLongitude").value=event.longitude??"";
     $("orgPinStatus").textContent=event.latitude!=null&&event.longitude!=null?"Venue pin saved. You can move it on the map.":"No venue pin saved yet.";$("orgPinMapWrap").hidden=true;$("saveVenuePinButton").style.display="inline-flex";
     $("orgCover").value="";$("orgVideo").value="";$("orgGallery").value="";$("orgGalleryExisting").innerHTML="<p class=note>Loading existing gallery…</p>";$("orgCommission").value="";
@@ -1112,6 +1112,8 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if(!name||!date||!venue)return toast("Enter the event name, date and venue.");
     const galleryFiles=Array.from($("orgGallery")?.files||[]),galleryValidation=validateEventGalleryFiles(galleryFiles);
     if(galleryValidation)return toast(galleryValidation);
+    const flashDiscount=Number($("orgFlashDiscount")?.value||0),flashStart=$("orgFlashStart")?.value,flashEnd=$("orgFlashEnd")?.value;
+    if(flashDiscount&&(flashDiscount<5||flashDiscount>80||!flashStart||!flashEnd||new Date(flashEnd)<=new Date(flashStart)))return toast("Flash deals need a 5–80% discount and a valid start/end time.");
     eventSubmitInProgress=true;setButtonBusy(button,true,"SAVING CHANGES...");
     try{
       const {data:auth,error:authError}=await sb.auth.getUser();if(authError||!auth.user)throw new Error("Please log in again.");
@@ -1120,7 +1122,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       if(current.is_banned||current.status==="banned")throw new Error("This event is banned. Contact StarGates admin.");
       const uploadMedia=async(file,label)=>{if(!file)return null;if(!["image/jpeg","image/png","image/webp","image/gif","video/mp4","video/webm"].includes(file.type))throw new Error("Unsupported "+label+" file type.");if(file.size>50*1024*1024)throw new Error(label+" must be 50 MB or smaller.");const ext=(file.name.split(".").pop()||"bin").toLowerCase().replace(/[^a-z0-9]/g,"");const path=auth.user.id+"/"+editingEventId+"/"+label+"-"+Date.now()+"."+ext;const {data,error}=await sb.storage.from("event-media").upload(path,file,{contentType:file.type,upsert:false});if(error)throw error;return sb.storage.from("event-media").getPublicUrl(data.path).data.publicUrl;};
       const cover=await uploadMedia($("orgCover")?.files?.[0],"event-cover"),video=await uploadMedia($("orgVideo")?.files?.[0],"event-trailer");
-      const patch={title:name,description:$("orgDesc")?.value.trim()||"",category:String($("orgCat")?.value||"Other").toLowerCase(),location:venue,event_date:new Date(date+"T20:00:00").toISOString(),latitude:$("orgLatitude")?.value===""?null:Number($("orgLatitude").value),longitude:$("orgLongitude")?.value===""?null:Number($("orgLongitude").value)};
+      const patch={title:name,description:$("orgDesc")?.value.trim()||"",category:String($("orgCat")?.value||"Other").toLowerCase(),location:venue,event_date:new Date(date+"T20:00:00").toISOString(),latitude:$("orgLatitude")?.value===""?null:Number($("orgLatitude").value),longitude:$("orgLongitude")?.value===""?null:Number($("orgLongitude").value),flash_discount_percent:flashDiscount||null,flash_starts_at:flashDiscount?new Date(flashStart).toISOString():null,flash_ends_at:flashDiscount?new Date(flashEnd).toISOString():null};
       if(cover)patch.image_url=cover;if(video)patch.trailer_url=video;else if($("orgTrailer")?.value.trim())patch.trailer_url=$("orgTrailer").value.trim();
       if(current.status==="published")patch.status="draft";
       const {error:updateError}=await sb.from("events").update(patch).eq("id",editingEventId).eq("organizer_id",auth.user.id);if(updateError)throw updateError;
