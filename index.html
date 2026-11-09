@@ -70,6 +70,19 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 .organizer-level.established{border-color:#9ca3af;background:#9ca3af14;color:#d4d8df}
 .organizer-level.newcomer{border-color:#4b5140;color:#c3c9b8}
 
+
+.event-gallery-area{margin-top:18px;padding-top:16px;border-top:1px solid #ffffff18}
+.event-gallery-heading{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:10px;color:var(--lime);font-size:10px;font-weight:950;letter-spacing:1.8px}
+.event-gallery-heading small{color:#858b79;font-size:9px}
+.event-gallery-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.event-gallery-grid a{display:block;overflow:hidden;border-radius:9px;background:#10130d;aspect-ratio:1}
+.event-gallery-grid img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .2s}
+.event-gallery-grid a:hover img{transform:scale(1.05)}
+.gallery-manage-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.gallery-manage-item{min-width:0;border:1px solid #333;border-radius:10px;padding:6px;background:#0a0a0a}
+.gallery-manage-item img{display:block;width:100%;aspect-ratio:1;object-fit:cover;border-radius:7px}
+.gallery-manage-item button{width:100%;margin-top:6px;padding:7px;font-size:9px}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -164,7 +177,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 </div></div>
 
 <div class="modal" id="orgModal" onclick="if(event.target===this)closeModal('orgModal')"><div class="sheet"><div class="sheet-head"><div><div class="kicker">ORGANIZER</div><h3 id="orgModalHeading">CREATE EVENT.</h3></div><button class="close" onclick="closeModal('orgModal')">×</button></div>
-  <div class="form"><label>Event name<input id="orgName" placeholder="e.g. Summer Festival"></label><label>Category<select id="orgCat"><option>Music</option><option>Parties</option><option>Sports</option><option>Other</option></select></label><label>Date<input id="orgDate" type="date"></label><label>Venue<input id="orgVenue" placeholder="Venue / location"></label><label>Description<textarea id="orgDesc" placeholder="Tell people what makes your event worth attending."></textarea></label><label>Event cover photo<input id="orgCover" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><label>Event trailer video<input id="orgVideo" type="file" accept="video/mp4,video/webm"><small class="note">MP4 or WebM · Maximum 50 MB</small></label><label>Or paste a video URL (optional)<input id="orgTrailer" type="url" placeholder="https://..."></label><label>Ticket types — add artwork to each ticket</label><div id="ticketTypeRows"><div class="ticket-type-row" style="border:1px solid #333;border-radius:14px;padding:12px;display:grid;gap:9px"><input class="ticket-type-name" placeholder="Ticket name — e.g. Early Bird"><input class="ticket-type-price" type="number" min="0" step="1" placeholder="Price in KSh — e.g. 500"><input class="ticket-type-quantity" type="number" min="1" step="1" placeholder="Quantity — e.g. 100"><label>Ticket artwork (optional)<input class="ticket-type-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label></div></div><button type="button" class="secondary" onclick="addTicketType()">+ ADD ANOTHER TICKET TYPE</button><label>Your platform commission %<input id="orgCommission" type="number" min="0" max="100" placeholder="5"></label><button id="orgSubmitButton" class="primary" onclick="publishEvent()">PUBLISH EVENT</button></div>
+  <div class="form"><label>Event name<input id="orgName" placeholder="e.g. Summer Festival"></label><label>Category<select id="orgCat"><option>Music</option><option>Parties</option><option>Sports</option><option>Other</option></select></label><label>Date<input id="orgDate" type="date"></label><label>Venue<input id="orgVenue" placeholder="Venue / location"></label><label>Description<textarea id="orgDesc" placeholder="Tell people what makes your event worth attending."></textarea></label><label>Event cover photo<input id="orgCover" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label><label>Event gallery photos (optional)<input id="orgGallery" type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple><small class="note">Up to 8 extra photos · JPG, PNG, WebP or GIF · 10 MB each</small></label><div id="orgGalleryExisting" class="gallery-manage-grid"></div><label>Event trailer video<input id="orgVideo" type="file" accept="video/mp4,video/webm"><small class="note">MP4 or WebM · Maximum 50 MB</small></label><label>Or paste a video URL (optional)<input id="orgTrailer" type="url" placeholder="https://..."></label><label>Ticket types — add artwork to each ticket</label><div id="ticketTypeRows"><div class="ticket-type-row" style="border:1px solid #333;border-radius:14px;padding:12px;display:grid;gap:9px"><input class="ticket-type-name" placeholder="Ticket name — e.g. Early Bird"><input class="ticket-type-price" type="number" min="0" step="1" placeholder="Price in KSh — e.g. 500"><input class="ticket-type-quantity" type="number" min="1" step="1" placeholder="Quantity — e.g. 100"><label>Ticket artwork (optional)<input class="ticket-type-image" type="file" accept="image/jpeg,image/png,image/webp,image/gif"></label></div></div><button type="button" class="secondary" onclick="addTicketType()">+ ADD ANOTHER TICKET TYPE</button><label>Your platform commission %<input id="orgCommission" type="number" min="0" max="100" placeholder="5"></label><button id="orgSubmitButton" class="primary" onclick="publishEvent()">PUBLISH EVENT</button></div>
   <div class="note">Demo organizer flow. Production version saves this event to a database and publishes it to the marketplace.</div>
 </div></div>
 
@@ -430,6 +443,57 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       else { window.prompt("Copy this event link:", url.toString()); }
     } catch (error) { if (error && error.name !== "AbortError") toast("Could not share the event right now."); }
   };
+
+  async function uploadEventGalleryFiles(eventId,userId,files) {
+    if (!files || !files.length) return 0;
+    if (files.length > 8) throw new Error("Choose no more than 8 gallery photos at a time.");
+    const rows = [], uploadedPaths = [];
+    try {
+      for (let i=0;i<files.length;i++) {
+        const file=files[i];
+        if (!["image/jpeg","image/png","image/webp","image/gif"].includes(file.type)) throw new Error("Gallery photo "+(i+1)+" must be JPG, PNG, WebP or GIF.");
+        if (file.size>10*1024*1024) throw new Error("Gallery photo "+(i+1)+" is larger than 10 MB.");
+        const ext=(file.name.split(".").pop()||"jpg").toLowerCase().replace(/[^a-z0-9]/g,"")||"jpg";
+        const path=userId+"/"+eventId+"/gallery-"+Date.now()+"-"+i+"."+ext;
+        const uploaded=await sb.storage.from("event-media").upload(path,file,{contentType:file.type,upsert:false});
+        if(uploaded.error)throw uploaded.error;
+        uploadedPaths.push(uploaded.data.path);
+        rows.push({event_id:eventId,organizer_id:userId,image_url:sb.storage.from("event-media").getPublicUrl(uploaded.data.path).data.publicUrl,storage_path:uploaded.data.path});
+      }
+      const inserted=await sb.from("event_gallery").insert(rows);
+      if(inserted.error)throw inserted.error;
+      return rows.length;
+    } catch(error) {
+      if(uploadedPaths.length) await sb.storage.from("event-media").remove(uploadedPaths);
+      throw error;
+    }
+  }
+
+  async function loadEventGallery(eventId) {
+    const area=$("eventGalleryArea");
+    if(!area||!sb)return;
+    const {data,error}=await sb.from("event_gallery").select("id,image_url,caption").eq("event_id",eventId).order("created_at");
+    if(error){console.warn("StarGates event gallery:",error);area.hidden=true;return;}
+    if(!data?.length){area.hidden=true;return;}
+    const safe=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+    area.innerHTML='<div class="event-gallery-heading"><span>EVENT GALLERY</span><small>'+data.length+' PHOTO(S)</small></div><div class="event-gallery-grid">'+data.map(photo=>'<a href="'+safe(photo.image_url)+'" target="_blank" rel="noopener"><img src="'+safe(photo.image_url)+'" alt="'+safe(photo.caption||"Event gallery photo")+'" loading="lazy"></a>').join("")+'</div>';
+    area.hidden=false;
+  }
+
+  window.deleteEventGalleryImage = async function(id,path,button) {
+    if(!sb||!confirm("Remove this photo from the event gallery?"))return;
+    const {data:auth,error:authError}=await sb.auth.getUser();
+    if(authError||!auth.user)return toast("Log in as the event organizer first.");
+    if(!String(path||"").startsWith(auth.user.id+"/"))return toast("You can only remove your own uploaded photos.");
+    if(button){button.disabled=true;button.textContent="REMOVING…";}
+    const deleted=await sb.from("event_gallery").delete().eq("id",id).eq("organizer_id",auth.user.id);
+    if(deleted.error){if(button){button.disabled=false;button.textContent="REMOVE";}return toast("Could not remove the gallery photo: "+deleted.error.message);}
+    const storage=await sb.storage.from("event-media").remove([path]);
+    if(storage.error)console.warn("Gallery photo removed from event but storage cleanup failed:",storage.error);
+    if(button)button.closest(".gallery-manage-item")?.remove();
+    toast(storage.error?"Photo removed from the event gallery.":"Gallery photo removed.");
+  };
+
   window.openEventDetails = async function (eventId) {
     const ev = publishedEventDetails.get(String(eventId));
     if (!ev) return;
@@ -441,12 +505,13 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const isVideo = ev.trailer_url && /(mp4|webm|ogg)([?]|$)/i.test(ev.trailer_url);
     const trailer = isVideo ? '<video class="event-trailer" controls playsinline preload="metadata"><source src="'+safe(ev.trailer_url)+'"></video>' : (ev.trailer_url ? '<a class="primary" style="display:inline-block;margin-top:16px" href="'+safe(ev.trailer_url)+'" target="_blank" rel="noopener">WATCH EVENT TRAILER ↗</a>' : '<p class="note">No event trailer has been uploaded yet.</p>');
     const ticketRows = tickets.length ? tickets.map(t => '<div class="ticket">'+(t.image_url?'<img src="'+safe(t.image_url)+'" alt="'+safe(t.name)+' ticket artwork" style="width:86px;height:58px;object-fit:cover;border-radius:8px;margin-right:12px">':'')+'<div style="flex:1"><b>'+safe(t.name)+'</b><small>KSh '+Number(t.price).toLocaleString("en-KE")+'</small></div><span class="small">'+(Number.isFinite(Number(t.quantity))?Number(t.quantity)+' available':'')+'</span></div>').join("") : '<p class="note">Ticket options have not been added yet.</p>';
-    $("eventDetailContent").innerHTML = '<div class="event-hero-layout"><div>'+poster+trailer+'</div><div class="event-info"><span class="event-category">'+safe(ev.category || "Event")+'</span><h1>'+safe(ev.title || "EVENT")+'</h1><div class="event-facts"><span>📅 '+safe(date)+'</span><span>📍 '+safe(ev.location || "Venue TBA")+'</span></div><div id="eventCountdown" class="event-countdown" aria-live="off"></div><div id="eventOrganizerArea" style="margin:18px 0;padding:15px;border:1px solid #333;border-radius:16px"><span class="note">ORGANIZED BY</span><p class="note">Checking organizer profile…</p></div><div class="event-section"><h4>ABOUT THIS EVENT</h4><p class="event-description">'+safe(ev.description || "The organiser has not added a description yet.")+'</p></div><div class="event-section"><h4>TICKETS & PRICES</h4><div class="event-ticket-list">'+ticketRows+'</div><div class="event-booking-note">Ticket booking will be enabled once StarGates payment services are connected.</div></div></div></div>';
+    $("eventDetailContent").innerHTML = '<div class="event-hero-layout"><div>'+poster+trailer+'<div id="eventGalleryArea" class="event-gallery-area" hidden></div></div><div class="event-info"><span class="event-category">'+safe(ev.category || "Event")+'</span><h1>'+safe(ev.title || "EVENT")+'</h1><div class="event-facts"><span>📅 '+safe(date)+'</span><span>📍 '+safe(ev.location || "Venue TBA")+'</span></div><div id="eventCountdown" class="event-countdown" aria-live="off"></div><div id="eventOrganizerArea" style="margin:18px 0;padding:15px;border:1px solid #333;border-radius:16px"><span class="note">ORGANIZED BY</span><p class="note">Checking organizer profile…</p></div><div class="event-section"><h4>ABOUT THIS EVENT</h4><p class="event-description">'+safe(ev.description || "The organiser has not added a description yet.")+'</p></div><div class="event-section"><h4>TICKETS & PRICES</h4><div class="event-ticket-list">'+ticketRows+'</div><div class="event-booking-note">Ticket booking will be enabled once StarGates payment services are connected.</div></div></div></div>';
     const url = new URL(window.location.href);
     url.searchParams.set("event", String(ev.id));
     history.replaceState({eventId:String(ev.id)}, "", url);
     openModal("eventDetailModal");
     startEventCountdown(ev.event_date);
+    loadEventGallery(ev.id);
     const area = $("eventOrganizerArea");
     if (!area || !ev.organizer_id || !sb) return;
     const {data: org, error} = await sb.from("organizer_public_profiles").select("user_id,business_name,description,logo_url").eq("user_id",ev.organizer_id).eq("is_public",true).maybeSingle();
@@ -792,9 +857,12 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     $("orgName").value=event.title||"";$("orgCat").value=({music:"Music",parties:"Parties",sports:"Sports",other:"Other"})[String(event.category||"").toLowerCase()]||"Other";
     $("orgDate").value=event.event_date?new Date(event.event_date).toISOString().slice(0,10):"";
     $("orgVenue").value=event.location||"";$("orgDesc").value=event.description||"";$("orgTrailer").value=event.trailer_url||"";
-    $("orgCover").value="";$("orgVideo").value="";$("orgCommission").value="";
+    $("orgCover").value="";$("orgVideo").value="";$("orgGallery").value="";$("orgGalleryExisting").innerHTML="<p class=note>Loading existing gallery…</p>";$("orgCommission").value="";
     const {data:ticketRows,error:ticketLoadError}=await sb.from("ticket_types").select("id,name,price,quantity,image_url").eq("event_id",event.id).order("created_at");
     if(ticketLoadError)return toast("Could not load this event's ticket types: "+ticketLoadError.message);
+    const {data:galleryRows,error:galleryError}=await sb.from("event_gallery").select("id,image_url,storage_path,caption").eq("event_id",event.id).order("created_at");
+    if(galleryError){$("orgGalleryExisting").innerHTML="<p class=note>Could not load existing gallery photos.</p>";}
+    else {$("orgGalleryExisting").innerHTML=(galleryRows||[]).length?galleryRows.map(photo=>"<div class='gallery-manage-item'><img src='"+String(photo.image_url).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))+"' alt='Event gallery photo'><button type='button' class='secondary' onclick='deleteEventGalleryImage("+JSON.stringify(photo.id)+","+JSON.stringify(photo.storage_path)+",this)'>REMOVE</button></div>").join(""):"<p class=note>No gallery photos yet.</p>";}
     $("ticketTypeRows").innerHTML=(ticketRows||[]).map(t=>"<div class='ticket-type-row' data-ticket-id='"+String(t.id)+"' data-original-quantity='"+Number(t.quantity||0)+"' style='border:1px solid #333;border-radius:14px;padding:12px;display:grid;gap:9px;margin-top:9px'><input class='ticket-type-name' value='"+String(t.name||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+"' placeholder='Ticket name'><input class='ticket-type-price' type='number' min='0' step='1' value='"+Number(t.price||0)+"' placeholder='Price in KSh'><input class='ticket-type-quantity' type='number' min='"+Number(t.quantity||1)+"' step='1' value='"+Number(t.quantity||0)+"' placeholder='Total quantity'><label>Replace ticket artwork (optional)<input class='ticket-type-image' type='file' accept='image/jpeg,image/png,image/webp,image/gif'></label><small class='note'>Existing ticket type is kept; quantity can only be increased.</small></div>").join("")+"<p class='note'>Save updates existing ticket types. New ticket types can be added below. Existing ticket types cannot be deleted here.</p>";
     $("ticketTypeRows").querySelectorAll(".ticket-type-row").forEach(row=>{row.querySelector(".ticket-type-name").value=row.querySelector(".ticket-type-name").value;});
     $("ticketTypeRows").insertAdjacentHTML("beforeend","<button type='button' class='secondary' onclick='addTicketType()'>+ ADD ANOTHER TICKET TYPE</button>");
@@ -816,6 +884,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       if(cover)patch.image_url=cover;if(video)patch.trailer_url=video;else if($("orgTrailer")?.value.trim())patch.trailer_url=$("orgTrailer").value.trim();
       if(current.status==="published")patch.status="draft";
       const {error:updateError}=await sb.from("events").update(patch).eq("id",editingEventId).eq("organizer_id",auth.user.id);if(updateError)throw updateError;
+      const galleryAdded=await uploadEventGalleryFiles(editingEventId,auth.user.id,Array.from($("orgGallery")?.files||[]));
       const rows=Array.from(document.querySelectorAll("#ticketTypeRows .ticket-type-row"));
       if(!rows.length)throw new Error("Add at least one ticket type.");
       for(let index=0;index<rows.length;index++){
@@ -831,7 +900,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
         else ticketResult=await sb.from("ticket_types").insert({...ticketPatch,event_id:editingEventId});
         if(ticketResult.error)throw ticketResult.error;
       }
-      closeModal("orgModal");editingEventId=null;toast(current.status==="published"?"Event and tickets saved. Your event is back in admin review.":"Event and tickets saved.");await loadDashboard();await loadEvents();
+      closeModal("orgModal");editingEventId=null;toast((current.status==="published"?"Event and tickets saved. Your event is back in admin review.":"Event and tickets saved.")+(galleryAdded?" Added "+galleryAdded+" gallery photo(s).":""));await loadDashboard();await loadEvents();
     }catch(error){console.error("StarGates event edit:",error);toast("Could not save changes: "+(error.message||"Please try again."));}
     finally{eventSubmitInProgress=false;setButtonBusy(button,false);}
   };
@@ -934,6 +1003,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
         }
         const { error: ticketError } = await sb.from("ticket_types").insert(rows);
         if (ticketError) throw ticketError;
+        await uploadEventGalleryFiles(event.id,userData.user.id,Array.from($("orgGallery")?.files||[]));
       } catch (mediaError) {
         return toast("Event draft was saved, but media or ticket setup failed: "+mediaError.message+". Contact admin before submitting it again.");
       }
