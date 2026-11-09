@@ -61,6 +61,15 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 .spotlight-admin-actions{display:flex;gap:10px;flex-wrap:wrap}
 @media(max-width:700px){.spotlight-section{padding:42px 5vw 12px}.spotlight-card{grid-template-columns:1fr}.spotlight-image{min-height:190px;max-height:260px}.spotlight-copy{padding:24px}}
 
+
+.organizer-level-card{margin:4px 0 20px;padding:18px;border:1px solid #343d29;border-radius:16px;background:linear-gradient(120deg,#151a10,#0c0e0a)}
+.organizer-level{display:inline-flex;flex-direction:column;gap:4px;margin:8px 0;padding:9px 13px;border:1px solid #586b36;border-radius:12px;background:#c7ff4a12;color:var(--lime)}
+.organizer-level span{font-size:11px;font-weight:950;letter-spacing:1.5px}
+.organizer-level small{color:#b4b9a7;font-size:10px;line-height:1.4}
+.organizer-level.headliner{border-color:#d6b75a;background:#d6b75a14;color:#f3d77d}
+.organizer-level.established{border-color:#9ca3af;background:#9ca3af14;color:#d4d8df}
+.organizer-level.newcomer{border-color:#4b5140;color:#c3c9b8}
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -451,6 +460,22 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     }
   }
 
+
+  function organizerLevelInfo(publishedCount, followerCount) {
+    if (publishedCount >= 5 && followerCount >= 25) return {name:"HEADLINER",detail:"5+ published events and 25+ followers",className:"headliner"};
+    if (publishedCount >= 3) return {name:"ESTABLISHED",detail:"3+ published events",className:"established"};
+    if (publishedCount >= 1) return {name:"RISING STAR",detail:"At least 1 published event",className:"rising"};
+    return {name:"NEWCOMER",detail:"Your first published event is the next milestone",className:"newcomer"};
+  }
+  async function getOrganizerActivity(userId) {
+    const results = await Promise.all([
+      sb.from("events").select("id",{count:"exact",head:true}).eq("organizer_id",userId).eq("status","published"),
+      sb.from("organizer_follows").select("id",{count:"exact",head:true}).eq("organizer_id",userId)
+    ]);
+    if (results[0].error || results[1].error) return null;
+    return {publishedCount:results[0].count || 0,followerCount:results[1].count || 0};
+  }
+
   window.openOrganizerPublicProfile = async function(userId) {
     const content = $("organizerProfileContent");
     if (!content || !sb || !userId) return;
@@ -463,9 +488,10 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       return;
     }
     const safe = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-    const [{count: followerCount,error: countError},{data: auth}] = await Promise.all([
+    const [{count: followerCount,error: countError},{data: auth},activity] = await Promise.all([
       sb.from("organizer_follows").select("id",{count:"exact",head:true}).eq("organizer_id",userId),
-      sb.auth.getUser()
+      sb.auth.getUser(),
+      getOrganizerActivity(userId)
     ]);
     const viewerId = auth?.user?.id || null;
     let isFollowing = false;
@@ -477,9 +503,11 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     $("organizerProfileTitle").textContent = profile.business_name || "ORGANIZER";
     const logo = profile.logo_url ? '<img src="'+safe(profile.logo_url)+'" alt="'+safe(profile.business_name)+' logo" style="width:88px;height:88px;object-fit:cover;border-radius:22px;margin:12px 0">' : '<div class="organizer-avatar large">'+safe((profile.business_name||"S").trim().charAt(0).toUpperCase())+'</div>';
     const followControl = viewerId === userId ? '<span class="note">YOUR ORGANIZER PROFILE</span>' : '<button class="primary" type="button" data-follow-organizer="'+safe(userId)+'" data-following="'+(isFollowing?'true':'false')+'" style="margin:14px 0">'+(isFollowing?'FOLLOWING ✓':'＋ FOLLOW')+'</button>';
-    const stats = '<div style="display:flex;gap:24px;flex-wrap:wrap;margin:12px 0"><span><b id="organizerFollowerCount">'+(countError?'—':Number(followerCount||0).toLocaleString())+'</b> <span class="note">FOLLOWERS</span></span><span><b>'+events.length+'</b> <span class="note">EVENTS</span></span></div>';
+    const level = activity ? organizerLevelInfo(activity.publishedCount,activity.followerCount) : null;
+    const levelMarkup = level ? '<div class="organizer-level '+level.className+'"><span>✦ '+level.name+'</span><small>'+level.detail+'</small></div>' : '<p class="note">Organizer level is temporarily unavailable.</p>';
+    const stats = '<div style="display:flex;gap:24px;flex-wrap:wrap;margin:12px 0"><span><b id="organizerFollowerCount">'+(countError?'—':Number(followerCount||0).toLocaleString())+'</b> <span class="note">FOLLOWERS</span></span><span><b>'+(activity?activity.publishedCount:'—')+'</b> <span class="note">PUBLISHED EVENTS</span></span></div>';
     const list = events.length ? events.map(ev => '<button class="organizer-event" type="button" data-profile-event="'+safe(ev.id)+'">'+(ev.image_url?'<img src="'+safe(ev.image_url)+'" alt="" loading="lazy">':'<span class="organizer-event-placeholder">ST★R</span>')+'<span><b>'+safe(ev.title)+'</b><small>'+(ev.event_date?safe(new Date(ev.event_date).toLocaleDateString()):"Date TBA")+'</small></span><span>→</span></button>').join("") : '<p class="note">No other published events yet.</p>';
-    content.innerHTML = '<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">'+logo+'<div style="flex:1;min-width:150px"><h3 style="margin:8px 0">'+safe(profile.business_name)+'</h3>'+stats+followControl+'</div></div><p style="line-height:1.7;white-space:pre-wrap">'+safe(profile.description || "This is a StarGates organizer. Check back for more events and updates.")+'</p><h4 style="margin:24px 0 10px">PUBLISHED EVENTS</h4>'+list;
+    content.innerHTML = '<div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap">'+logo+'<div style="flex:1;min-width:150px"><h3 style="margin:8px 0">'+safe(profile.business_name)+'</h3>'+levelMarkup+stats+followControl+'</div></div><p style="line-height:1.7;white-space:pre-wrap">'+safe(profile.description || "This is a StarGates organizer. Check back for more events and updates.")+'</p><h4 style="margin:24px 0 10px">PUBLISHED EVENTS</h4>'+list;
   };
 
   window.toggleOrganizerFollow = async function(button) {
@@ -639,7 +667,16 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       }
     });
     const compactEvents = Array.from(myEventGroups.values());
-    if (panel) panel.innerHTML = "<h3>My Events</h3>" + (["organizer","admin"].includes(profile?.role) ? "<button class='primary' style='margin:10px 0 16px' onclick='openOrganizer()'>+ CREATE ANOTHER EVENT</button>" : "") + (compactEvents.length ? compactEvents.map(e=>"<div class='ticket' style='display:flex;align-items:center;justify-content:space-between;gap:10px'><div><b>"+String(e.title).replace(/[&<>"]/g,"")+"</b><small>"+e.status.toUpperCase()+" · "+(e.event_date?new Date(e.event_date).toLocaleDateString():"Date TBA")+(e.duplicateCount>1?" · "+e.duplicateCount+" repeated submissions grouped":"")+"</small></div><button class='secondary' type='button' onclick='openEditEvent("+JSON.stringify(e.id)+")'>EDIT</button></div>").join("") : "<p class='note'>No events submitted yet. Apply to host and submit your first event.</p>") + "<button class='secondary' onclick='signOut()'>LOG OUT</button>";
+    let organizerLevelPanel = "";
+    if (["organizer","admin"].includes(profile?.role)) {
+      const followerResult = await sb.from("organizer_follows").select("id",{count:"exact",head:true}).eq("organizer_id",auth.user.id);
+      const publishedCount = (events || []).filter(e=>e.status==="published").length;
+      if (!followerResult.error) {
+        const level = organizerLevelInfo(publishedCount,followerResult.count || 0);
+        organizerLevelPanel = "<div class='organizer-level-card'><span class='kicker'>YOUR ORGANIZER LEVEL</span><div class='organizer-level "+level.className+"'><span>✦ "+level.name+"</span><small>"+level.detail+"</small></div><p class='note'>"+publishedCount+" published event(s) · "+(followerResult.count || 0)+" follower(s). Levels are based on real activity.</p></div>";
+      }
+    }
+    if (panel) panel.innerHTML = organizerLevelPanel + "<h3>My Events</h3>" + (["organizer","admin"].includes(profile?.role) ? "<button class='primary' style='margin:10px 0 16px' onclick='openOrganizer()'>+ CREATE ANOTHER EVENT</button>" : "") + (compactEvents.length ? compactEvents.map(e=>"<div class='ticket' style='display:flex;align-items:center;justify-content:space-between;gap:10px'><div><b>"+String(e.title).replace(/[&<>"]/g,"")+"</b><small>"+e.status.toUpperCase()+" · "+(e.event_date?new Date(e.event_date).toLocaleDateString():"Date TBA")+(e.duplicateCount>1?" · "+e.duplicateCount+" repeated submissions grouped":"")+"</small></div><button class='secondary' type='button' onclick='openEditEvent("+JSON.stringify(e.id)+")'>EDIT</button></div>").join("") : "<p class='note'>No events submitted yet. Apply to host and submit your first event.</p>") + "<button class='secondary' onclick='signOut()'>LOG OUT</button>";
     const { data: application } = await sb.from("organizer_applications").select("status").eq("user_id",auth.user.id).maybeSingle();
     if ($("applyMessage") && application) $("applyMessage").textContent = "Application status: "+application.status;
   }
