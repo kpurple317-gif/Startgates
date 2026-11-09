@@ -840,7 +840,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   function initCustomerEventMap(){
     if(customerEventMap)return true;if(!window.L)return false;
     customerEventMap=L.map("nearbyEventsMap",{scrollWheelZoom:false}).setView([-1.286389,36.817223],6);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(customerEventMap);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(customerEventMap);
     customerEventMarkers=L.layerGroup().addTo(customerEventMap);return true;
   }
   function renderNearbyEventMap(){
@@ -878,7 +878,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   function initOrganizerPinMap(){
     if(organizerPinMap)return true;if(!window.L)return false;
     organizerPinMap=L.map("orgPinMap").setView([-1.286389,36.817223],6);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(organizerPinMap);
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(organizerPinMap);
     organizerPinMap.on("click",e=>setOrganizerVenuePin(e.latlng.lat,e.latlng.lng));return true;
   }
   function setOrganizerVenuePin(lat,lng){
