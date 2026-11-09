@@ -36,6 +36,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
 @media(max-width:800px){.event-hero-layout{grid-template-columns:1fr}.event-cover{max-height:380px}.event-detail-sheet{max-height:96vh}.hero{min-height:auto;grid-template-columns:1fr;padding:75px 6vw 50px;gap:12px}.hero-art{height:390px;max-width:540px;width:100%;margin:0 auto}.art-ticket{min-height:320px}.hero-foot{margin-top:38px}.intro-strip{flex-wrap:wrap;justify-content:center;text-align:center}.intro-strip span{width:100%}}
 @media(max-width:800px){header{gap:10px;padding-left:4vw;padding-right:4vw}.nav{gap:9px;flex:0 0 auto}.nav button{white-space:nowrap;flex:0 0 auto;padding:10px 11px;font-size:11px}}@media(max-width:520px){.nav{gap:6px}.nav button{padding:9px 9px;font-size:10px;letter-spacing:-.2px}.brand-mark{width:38px;height:29px}.brand{gap:5px;letter-spacing:1px}}@media(max-width:520px){.discovery-tools{align-items:stretch;flex-direction:column}.event-search input{max-width:none}.sort-control{justify-content:space-between}.sort-control select{flex:1}.hero{padding:60px 6vw 35px}.hero h1{font-size:clamp(51px,14vw,76px);letter-spacing:-.07em}.hero p{font-size:14px}.hero-art{height:330px}.art-ticket{width:245px;min-height:285px;padding:18px}.art-ticket-main strong{font-size:42px}.art-stamp{right:3px;bottom:18px}.orbit-one{width:300px}.orbit-two{width:340px}.hero-foot{font-size:8px;gap:9px}.intro-strip b{font-size:12px}#events{padding-top:65px}}
 
+.event-countdown{margin:18px 0;padding:15px;border:1px solid #414b2e;border-radius:16px;background:linear-gradient(135deg,#171d10,#0c0f0a)}.event-countdown-label{display:flex;align-items:center;gap:8px;color:var(--lime);font-size:9px;font-weight:950;letter-spacing:2px;margin-bottom:12px}.event-countdown-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}.event-countdown-unit{padding:10px 4px;text-align:center;background:#080a07;border:1px solid #303927;border-radius:10px}.event-countdown-unit b{display:block;font-size:clamp(22px,4vw,32px);line-height:1.1;letter-spacing:-1px;font-weight:950;color:#fff;font-variant-numeric:tabular-nums}.event-countdown-unit small{display:block;margin-top:5px;color:#858b79;font-size:8px;letter-spacing:1px}.event-countdown-live{color:var(--lime);font-size:19px;font-weight:950;letter-spacing:1px}@media(max-width:380px){.event-countdown{padding:11px}.event-countdown-grid{gap:5px}.event-countdown-unit{padding:9px 2px}}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -188,7 +189,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const el = $(id);
     if (!el) return;
     el.classList.remove("open");
-    if (id === "eventDetailModal") { const url = new URL(window.location.href); url.searchParams.delete("event"); history.replaceState({}, "", url); currentEventForShare = null; }
+    if (id === "eventDetailModal") { if (eventCountdownTimer) { clearInterval(eventCountdownTimer); eventCountdownTimer = null; } const url = new URL(window.location.href); url.searchParams.delete("event"); history.replaceState({}, "", url); currentEventForShare = null; }
     if (!document.querySelector(".modal.open")) document.body.style.overflow = "";
   };
   window.openAccount = () => openModal("accountModal");
@@ -350,6 +351,33 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   }
 
   let currentEventForShare = null;
+  let eventCountdownTimer = null;
+  function startEventCountdown(eventDate) {
+    if (eventCountdownTimer) clearInterval(eventCountdownTimer);
+    const el = $("eventCountdown");
+    const target = eventDate ? new Date(eventDate).getTime() : NaN;
+    if (!el) return;
+    if (!Number.isFinite(target)) {
+      el.innerHTML = '<div class="event-countdown-label">✦ EVENT COUNTDOWN</div><div class="note">The organiser has not confirmed the event date yet.</div>';
+      return;
+    }
+    const render = () => {
+      const remaining = target - Date.now();
+      if (remaining <= 0) {
+        el.innerHTML = '<div class="event-countdown-label">✦ THE MOMENT IS HERE</div><div class="event-countdown-live">EVENT START TIME REACHED</div>';
+        clearInterval(eventCountdownTimer);
+        eventCountdownTimer = null;
+        return;
+      }
+      const days = Math.floor(remaining / 86400000);
+      const hours = Math.floor((remaining % 86400000) / 3600000);
+      const minutes = Math.floor((remaining % 3600000) / 60000);
+      const seconds = Math.floor((remaining % 60000) / 1000);
+      el.innerHTML = '<div class="event-countdown-label">✦ THE COUNTDOWN IS ON</div><div class="event-countdown-grid"><div class="event-countdown-unit"><b>'+days+'</b><small>DAYS</small></div><div class="event-countdown-unit"><b>'+String(hours).padStart(2,"0")+'</b><small>HOURS</small></div><div class="event-countdown-unit"><b>'+String(minutes).padStart(2,"0")+'</b><small>MINUTES</small></div><div class="event-countdown-unit"><b>'+String(seconds).padStart(2,"0")+'</b><small>SECONDS</small></div></div>';
+    };
+    render();
+    if (target > Date.now()) eventCountdownTimer = setInterval(render,1000);
+  }
   window.shareCurrentEvent = async function() {
     if (!currentEventForShare) return;
     const url = new URL(window.location.href);
@@ -372,11 +400,12 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const isVideo = ev.trailer_url && /(mp4|webm|ogg)([?]|$)/i.test(ev.trailer_url);
     const trailer = isVideo ? '<video class="event-trailer" controls playsinline preload="metadata"><source src="'+safe(ev.trailer_url)+'"></video>' : (ev.trailer_url ? '<a class="primary" style="display:inline-block;margin-top:16px" href="'+safe(ev.trailer_url)+'" target="_blank" rel="noopener">WATCH EVENT TRAILER ↗</a>' : '<p class="note">No event trailer has been uploaded yet.</p>');
     const ticketRows = tickets.length ? tickets.map(t => '<div class="ticket">'+(t.image_url?'<img src="'+safe(t.image_url)+'" alt="'+safe(t.name)+' ticket artwork" style="width:86px;height:58px;object-fit:cover;border-radius:8px;margin-right:12px">':'')+'<div style="flex:1"><b>'+safe(t.name)+'</b><small>KSh '+Number(t.price).toLocaleString("en-KE")+'</small></div><span class="small">'+(Number.isFinite(Number(t.quantity))?Number(t.quantity)+' available':'')+'</span></div>').join("") : '<p class="note">Ticket options have not been added yet.</p>';
-    $("eventDetailContent").innerHTML = '<div class="event-hero-layout"><div>'+poster+trailer+'</div><div class="event-info"><span class="event-category">'+safe(ev.category || "Event")+'</span><h1>'+safe(ev.title || "EVENT")+'</h1><div class="event-facts"><span>📅 '+safe(date)+'</span><span>📍 '+safe(ev.location || "Venue TBA")+'</span></div><div id="eventOrganizerArea" style="margin:18px 0;padding:15px;border:1px solid #333;border-radius:16px"><span class="note">ORGANIZED BY</span><p class="note">Checking organizer profile…</p></div><div class="event-section"><h4>ABOUT THIS EVENT</h4><p class="event-description">'+safe(ev.description || "The organiser has not added a description yet.")+'</p></div><div class="event-section"><h4>TICKETS & PRICES</h4><div class="event-ticket-list">'+ticketRows+'</div><div class="event-booking-note">Ticket booking will be enabled once StarGates payment services are connected.</div></div></div></div>';
+    $("eventDetailContent").innerHTML = '<div class="event-hero-layout"><div>'+poster+trailer+'</div><div class="event-info"><span class="event-category">'+safe(ev.category || "Event")+'</span><h1>'+safe(ev.title || "EVENT")+'</h1><div class="event-facts"><span>📅 '+safe(date)+'</span><span>📍 '+safe(ev.location || "Venue TBA")+'</span></div><div id="eventCountdown" class="event-countdown" aria-live="off"></div><div id="eventOrganizerArea" style="margin:18px 0;padding:15px;border:1px solid #333;border-radius:16px"><span class="note">ORGANIZED BY</span><p class="note">Checking organizer profile…</p></div><div class="event-section"><h4>ABOUT THIS EVENT</h4><p class="event-description">'+safe(ev.description || "The organiser has not added a description yet.")+'</p></div><div class="event-section"><h4>TICKETS & PRICES</h4><div class="event-ticket-list">'+ticketRows+'</div><div class="event-booking-note">Ticket booking will be enabled once StarGates payment services are connected.</div></div></div></div>';
     const url = new URL(window.location.href);
     url.searchParams.set("event", String(ev.id));
     history.replaceState({eventId:String(ev.id)}, "", url);
     openModal("eventDetailModal");
+    startEventCountdown(ev.event_date);
     const area = $("eventOrganizerArea");
     if (!area || !ev.organizer_id || !sb) return;
     const {data: org, error} = await sb.from("organizer_public_profiles").select("user_id,business_name,description,logo_url").eq("user_id",ev.organizer_id).eq("is_public",true).maybeSingle();
