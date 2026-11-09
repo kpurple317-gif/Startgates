@@ -560,13 +560,14 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     const isVideo = ev.trailer_url && /(mp4|webm|ogg)([?]|$)/i.test(ev.trailer_url);
     const trailer = isVideo ? '<video class="event-trailer" controls playsinline preload="metadata"><source src="'+safe(ev.trailer_url)+'"></video>' : (ev.trailer_url ? '<a class="primary" style="display:inline-block;margin-top:16px" href="'+safe(ev.trailer_url)+'" target="_blank" rel="noopener">WATCH EVENT TRAILER ↗</a>' : '<p class="note">No event trailer has been uploaded yet.</p>');
     const ticketRows = tickets.length ? tickets.map(t => '<div class="ticket">'+(t.image_url?'<img src="'+safe(t.image_url)+'" alt="'+safe(t.name)+' ticket artwork" style="width:86px;height:58px;object-fit:cover;border-radius:8px;margin-right:12px">':'')+'<div style="flex:1"><b>'+safe(t.name)+'</b><small>KSh '+Number(t.price).toLocaleString("en-KE")+'</small></div><span class="small">'+(Number.isFinite(Number(t.quantity))?Number(t.quantity)+' available':'')+'</span></div>').join("") : '<p class="note">Ticket options have not been added yet.</p>';
-    $("eventDetailContent").innerHTML = '<div class="event-hero-layout"><div>'+poster+trailer+'<div id="eventGalleryArea" class="event-gallery-area" hidden></div></div><div class="event-info"><span class="event-category">'+safe(ev.category || "Event")+'</span><h1>'+safe(ev.title || "EVENT")+'</h1><div class="event-facts"><span>📅 '+safe(date)+'</span><span>📍 '+safe(ev.location || "Venue TBA")+'</span></div><div id="eventCountdown" class="event-countdown" aria-live="off"></div><div id="eventOrganizerArea" style="margin:18px 0;padding:15px;border:1px solid #333;border-radius:16px"><span class="note">ORGANIZED BY</span><p class="note">Checking organizer profile…</p></div><div class="event-section"><h4>ABOUT THIS EVENT</h4><p class="event-description">'+safe(ev.description || "The organiser has not added a description yet.")+'</p></div><div class="event-section"><h4>TICKETS & PRICES</h4><div class="event-ticket-list">'+ticketRows+'</div><div class="event-booking-note">Ticket booking will be enabled once StarGates payment services are connected.</div></div></div></div>';
+    $("eventDetailContent").innerHTML = '<div class="event-hero-layout"><div>'+poster+trailer+'<div id="eventGalleryArea" class="event-gallery-area" hidden></div></div><div class="event-info"><span class="event-category">'+safe(ev.category || "Event")+'</span><h1>'+safe(ev.title || "EVENT")+'</h1><div class="event-facts"><span>📅 '+safe(date)+'</span><span>📍 '+safe(ev.location || "Venue TBA")+'</span></div><div class="event-action-row"><button class="secondary" type="button" onclick="toggleSaveEvent(\''+safe(ev.id)+'\',this)">'+(savedEventIds.has(String(ev.id))?'♥ SAVED':'♡ SAVE EVENT')+'</button><button class="secondary" type="button" onclick="generateEventPoster(\''+safe(ev.id)+'\')">▣ CREATE POSTER</button><button class="event-interest-button" type="button" onclick="toggleEventInterest(\''+safe(ev.id)+'\',this)">✦ '+(eventInterestCounts.get(String(ev.id))||0)+' INTERESTED</button></div><div id="eventCountdown" class="event-countdown" aria-live="off"></div><div id="eventOrganizerArea" style="margin:18px 0;padding:15px;border:1px solid #333;border-radius:16px"><span class="note">ORGANIZED BY</span><p class="note">Checking organizer profile…</p></div><div class="event-section"><h4>ABOUT THIS EVENT</h4><p class="event-description">'+safe(ev.description || "The organiser has not added a description yet.")+'</p></div><div class="event-section"><h4>TICKETS & PRICES</h4><div class="event-ticket-list">'+ticketRows+'</div><div class="event-booking-note">Ticket booking will be enabled once StarGates payment services are connected.</div></div><div class="event-review-box"><h4>EVENT REVIEWS</h4><div id="eventReviewSummary">Loading ratings…</div><div id="eventReviewList"></div><div id="eventReviewFormArea"></div></div></div></div>';
     const url = new URL(window.location.href);
     url.searchParams.set("event", String(ev.id));
     history.replaceState({eventId:String(ev.id)}, "", url);
     openModal("eventDetailModal");
     startEventCountdown(ev.event_date);
     loadEventGallery(ev.id);
+    loadEventReviews(ev.id,ev.event_date);
     const area = $("eventOrganizerArea");
     if (!area || !ev.organizer_id || !sb) return;
     const {data: org, error} = await sb.from("organizer_public_profiles").select("user_id,business_name,description,logo_url").eq("user_id",ev.organizer_id).eq("is_public",true).maybeSingle();
@@ -581,6 +582,22 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   }
 
 
+  window.loadEventReviews=async function(eventId,eventDate){
+    const summary=$("eventReviewSummary"),list=$("eventReviewList"),form=$("eventReviewFormArea");if(!summary||!list||!form)return;
+    const stats=eventReviewStats.get(String(eventId));summary.textContent=stats?("★ "+Number(stats.average_rating).toFixed(1)+" / 5 · "+stats.review_count+" reviews"):"No reviews yet.";
+    const {data:reviews,error}=await sb.from("event_public_reviews").select("rating,review_text,created_at").eq("event_id",eventId).order("created_at",{ascending:false}).limit(8);
+    if(!error&&reviews?.length)list.innerHTML=reviews.map(r=>'<div class="meta" style="padding:8px 0;border-top:1px solid #333">★ '+Number(r.rating)+'/5 · '+String(r.review_text||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))+'</div>').join("");
+    const ended=eventDate&&new Date(eventDate).getTime()<Date.now();
+    form.innerHTML=ended?'<label class="note">Rate this event</label><select id="eventReviewRating"><option value="5">★★★★★ — Loved it</option><option value="4">★★★★ — Great</option><option value="3">★★★ — Good</option><option value="2">★★ — Could be better</option><option value="1">★ — Disappointing</option></select><textarea id="eventReviewText" maxlength="1200" placeholder="Share your experience (optional)"></textarea><button class="primary" type="button" onclick="submitEventReview(\''+String(eventId)+'\')">SUBMIT REVIEW</button>':'<p class="note">Reviews open after the event has taken place.</p>';
+  };
+  window.submitEventReview=async function(eventId){
+    const {data,error}=await sb.auth.getUser();if(error||!data?.user)return toast("Log in to leave a review.");
+    const rating=Number($("eventReviewRating")?.value||5),review_text=$("eventReviewText")?.value.trim()||null;
+    const result=await sb.from("event_reviews").upsert({event_id:eventId,user_id:data.user.id,rating,review_text},{onConflict:"user_id,event_id"});
+    if(result.error)return toast(result.error.message);
+    toast("Thanks for reviewing this event!");await loadEventReviews(eventId,publishedEventDetails.get(String(eventId))?.event_date);
+    const {data:stats}=await sb.from("event_review_stats").select("event_id,review_count,average_rating").eq("event_id",eventId).maybeSingle();if(stats)eventReviewStats.set(String(eventId),stats);
+  };
   function organizerLevelInfo(publishedCount, followerCount) {
     if (publishedCount >= 5 && followerCount >= 25) return {name:"HEADLINER",detail:"5+ published events and 25+ followers",className:"headliner"};
     if (publishedCount >= 3) return {name:"ESTABLISHED",detail:"3+ published events",className:"established"};
@@ -868,6 +885,13 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       const card=[...document.querySelectorAll("#eventGrid .event-card")].find(x=>x.dataset.eventId===String(eventId));if(card)card.dataset.trending=String((eventSaveCounts.get(String(eventId))||0)+(eventInterestCounts.get(String(eventId))||0));
       applyEventFilters();toast(wasSaved?"Removed from Saved Events.":"Saved to your events. ❤️");
     }catch(e){toast(e.message||"Could not update saved events.");}finally{if(button)setButtonBusy(button,false);}
+  };
+  window.generateEventPoster=function(eventId){
+    const ev=publishedEventDetails.get(String(eventId));if(!ev)return;
+    const win=window.open("","_blank");if(!win)return toast("Allow pop-ups to create your poster.");
+    const safe=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+    const html='<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+safe(ev.title)+'</title><style>*{box-sizing:border-box}body{margin:0;background:#050805;color:#fff;font-family:Arial,sans-serif;display:grid;place-items:center;min-height:100vh;padding:20px}.poster{width:min(100%,650px);min-height:780px;border:2px solid #c7ff4a;border-radius:24px;overflow:hidden;background:linear-gradient(160deg,#182313,#050805 65%);display:flex;flex-direction:column}.poster img{width:100%;height:420px;object-fit:cover}.info{padding:30px}.brand{color:#c7ff4a;font-weight:900;letter-spacing:4px}.tag{margin-top:28px;color:#c7ff4a;font-size:12px;letter-spacing:3px}.title{font-size:clamp(32px,8vw,58px);font-weight:950;line-height:1;margin:15px 0}.meta{color:#d2d9ca;line-height:1.8}.foot{margin-top:auto;padding:22px 30px;border-top:1px solid #ffffff25;color:#c7ff4a;font-weight:900;letter-spacing:3px}@media print{body{padding:0}.poster{width:100%;height:100vh;min-height:0}}</style></head><body><main class="poster">'+(ev.image_url?'<img src="'+safe(ev.image_url)+'">':'')+'<section class="info"><div class="brand">✦ STARGATES</div><div class="tag">YOU ARE INVITED</div><h1 class="title">'+safe(ev.title)+'</h1><div class="meta">📅 '+safe(ev.event_date?new Date(ev.event_date).toLocaleString():"Date TBA")+'<br>📍 '+safe(ev.location||"Venue TBA")+'</div><p>'+safe(ev.description||"Discover this event on StarGates.")+'</p></section><footer class="foot">DISCOVER. EXPERIENCE. CONNECT.</footer></main></body></html>';
+    win.document.write(html);win.document.close();win.onload=()=>setTimeout(()=>win.print(),500);
   };
   window.toggleEventInterest=async function(eventId,button){
     const {data,error}=await sb.auth.getUser();if(error||!data?.user)return toast("Please log in to mark yourself interested.");
