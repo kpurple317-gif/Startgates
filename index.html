@@ -1171,6 +1171,8 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     if (galleryValidation) return toast(galleryValidation);
     if (!Number.isFinite(commission) || commission < 0 || commission > 100)
       return toast("Platform commission must be between 0 and 100%.");
+    const flashDiscount=Number($("orgFlashDiscount")?.value||0),flashStart=$("orgFlashStart")?.value,flashEnd=$("orgFlashEnd")?.value;
+    if(flashDiscount&&(flashDiscount<5||flashDiscount>80||!flashStart||!flashEnd||new Date(flashEnd)<=new Date(flashStart)))return toast("Flash deals need a 5–80% discount and a valid start/end time.");
 
     eventSubmitInProgress = true;
     setButtonBusy(button, true, "SUBMITTING EVENT...");
