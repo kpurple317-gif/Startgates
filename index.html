@@ -542,11 +542,15 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   }
   async function getOrganizerActivity(userId) {
     const results = await Promise.all([
-      sb.from("events").select("id",{count:"exact",head:true}).eq("organizer_id",userId).eq("status","published"),
+      sb.from("events").select("title,event_date").eq("organizer_id",userId).eq("status","published"),
       sb.from("organizer_follows").select("id",{count:"exact",head:true}).eq("organizer_id",userId)
     ]);
     if (results[0].error || results[1].error) return null;
-    return {publishedCount:results[0].count || 0,followerCount:results[1].count || 0};
+    const uniqueEvents = new Set((results[0].data || []).map(ev => {
+      const day = ev.event_date ? new Date(ev.event_date).toISOString().slice(0,10) : "no-date";
+      return String(ev.title || "").trim().toLowerCase() + "|" + day;
+    }));
+    return {publishedCount:uniqueEvents.size,followerCount:results[1].count || 0};
   }
 
   window.openOrganizerPublicProfile = async function(userId) {
@@ -744,7 +748,7 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     let organizerLevelPanel = "";
     if (["organizer","admin"].includes(profile?.role)) {
       const followerResult = await sb.from("organizer_follows").select("id",{count:"exact",head:true}).eq("organizer_id",auth.user.id);
-      const publishedCount = (events || []).filter(e=>e.status==="published").length;
+      const publishedCount = new Set((events || []).filter(e=>e.status==="published").map(e=>String(e.title||"").trim().toLowerCase()+"|"+(e.event_date?new Date(e.event_date).toISOString().slice(0,10):"no-date"))).size;
       if (!followerResult.error) {
         const level = organizerLevelInfo(publishedCount,followerResult.count || 0);
         organizerLevelPanel = "<div class='organizer-level-card'><span class='kicker'>YOUR ORGANIZER LEVEL</span><div class='organizer-level "+level.className+"'><span>✦ "+level.name+"</span><small>"+level.detail+"</small></div><p class='note'>"+publishedCount+" published event(s) · "+(followerResult.count || 0)+" follower(s). Levels are based on real activity.</p></div>";
