@@ -551,8 +551,22 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
   };
 
   window.openEventDetails = async function (eventId) {
-    const ev = publishedEventDetails.get(String(eventId));
-    if (!ev) return;
+    let ev = publishedEventDetails.get(String(eventId));
+    // Spotlight and deep links can be clicked before the public event cache is ready.
+    // Fetch the published event directly rather than silently doing nothing.
+    if (!ev && sb && eventId) {
+      const { data, error } = await sb.from("events")
+        .select("id,organizer_id,title,description,category,location,latitude,longitude,image_url,trailer_url,event_date,status,flash_discount_percent,flash_starts_at,flash_ends_at,ticket_types(name,price,quantity,image_url)")
+        .eq("id", eventId).eq("status", "published").maybeSingle();
+      if (error) {
+        console.error("StarGates event details:", error);
+        return toast("Could not load this event. Please try again.");
+      }
+      if (!data) return toast("This event is no longer available.");
+      ev = data;
+      publishedEventDetails.set(String(ev.id), ev);
+    }
+    if (!ev) return toast("This event is not available right now. Refresh and try again.");
     currentEventForShare = ev;
     sb.from("event_views").insert({event_id:ev.id}).then(({error})=>{if(error)console.warn("Event view tracking unavailable",error);});
     const safe = value => String(value ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
