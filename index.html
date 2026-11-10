@@ -1303,7 +1303,14 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
       ? '<img class="spotlight-image" src="' + safe(ev.image_url) + '" alt="' + safe(ev.title) + ' poster" loading="lazy">'
       : '<div class="spotlight-image spotlight-placeholder">✦ STARGATES</div>';
     const date = ev.event_date ? new Date(ev.event_date).toLocaleDateString() : "Date TBA";
-    content.innerHTML = '<div class="spotlight-card">' + image + '<div class="spotlight-copy"><span class="spotlight-label">FEATURED EXPERIENCE</span><h2>' + safe(ev.title) + '</h2><p>' + safe(ev.location || "Venue to be announced") + ' · ' + safe(date) + '</p><button class="primary" type="button" onclick="openEventDetails(' + JSON.stringify(String(ev.id)) + ')">EXPLORE SPOTLIGHT ↗</button></div></div>';
+    content.innerHTML = '<div class="spotlight-card">' + image + '<div class="spotlight-copy"><span class="spotlight-label">FEATURED EXPERIENCE</span><h2>' + safe(ev.title) + '</h2><p>' + safe(ev.location || "Venue to be announced") + ' · ' + safe(date) + '</p><button class="primary" type="button" data-spotlight-event="' + safe(ev.id) + '">EXPLORE SPOTLIGHT ↗</button></div></div>';
+    // Use delegated click handling instead of embedding a quoted ID in inline HTML.
+    content.onclick = function(event) {
+      const button = event.target.closest("[data-spotlight-event]");
+      if (!button) return;
+      event.preventDefault();
+      window.openEventDetails(button.dataset.spotlightEvent);
+    };
     section.hidden = false;
   }
 
