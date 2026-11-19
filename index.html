@@ -500,6 +500,31 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
     return null;
   }
 
+  window.eventShareUrl = function(eventId) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("event", String(eventId));
+    url.hash = "";
+    return url.toString();
+  };
+  window.copyEventLink = async function(eventId) {
+    const url = window.eventShareUrl(eventId);
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(url);
+        toast("Event link copied. Paste it into your bio.");
+      } else window.prompt("Copy this event link:", url);
+    } catch (error) { window.prompt("Copy this event link:", url); }
+  };
+  window.sharePublishedEvent = async function(eventId, title) {
+    const url = window.eventShareUrl(eventId);
+    try {
+      if (navigator.share) await navigator.share({title:title || "StarGates event",text:"Check out this event on StarGates.",url});
+      else await window.copyEventLink(eventId);
+    } catch (error) {
+      if (error && error.name !== "AbortError") toast("Could not share the event right now.");
+    }
+  };
+
   async function uploadEventGalleryFiles(eventId,userId,files) {
     if (!files || !files.length) return 0;
     if (files.length > 8) throw new Error("Choose no more than 8 gallery photos at a time.");
@@ -853,7 +878,21 @@ footer{padding:40px 6vw;border-top:1px solid #222;color:#777;display:flex;justif
         organizerLevelPanel = "<div class='organizer-level-card'><span class='kicker'>YOUR ORGANIZER LEVEL</span><div class='organizer-level "+level.className+"'><span>✦ "+level.name+"</span><small>"+level.detail+"</small></div><p class='note'>"+publishedCount+" published event(s) · "+(followerResult.count || 0)+" follower(s). Levels are based on real activity.</p></div>";
       }
     }
-    if (panel) panel.innerHTML = organizerLevelPanel + "<h3>My Events</h3>" + (["organizer","admin"].includes(profile?.role) ? "<button class='primary' style='margin:10px 0 16px' onclick='openOrganizer()'>+ CREATE ANOTHER EVENT</button>" : "") + (compactEvents.length ? compactEvents.map(e=>"<div class='ticket' style='display:flex;align-items:center;justify-content:space-between;gap:10px'><div><b>"+String(e.title).replace(/[&<>"]/g,"")+"</b><small>"+e.status.toUpperCase()+" · "+(e.event_date?new Date(e.event_date).toLocaleDateString():"Date TBA")+(e.duplicateCount>1?" · "+e.duplicateCount+" repeated submissions grouped":"")+"</small></div><button class='secondary' type='button' onclick='openEditEvent("+JSON.stringify(e.id)+")'>EDIT</button></div>").join("") : "<p class='note'>No events submitted yet. Apply to host and submit your first event.</p>") + "<button class='secondary' onclick='signOut()'>LOG OUT</button>";
+    let publicSharePanel = "";
+    if (["organizer","admin"].includes(profile?.role)) {
+      const { data: publicEvents, error: publicEventsError } = await sb.from("events")
+        .select("id,title,event_date,location").eq("status","published")
+        .order("event_date",{ascending:true}).limit(100);
+      if (!publicEventsError) {
+        const shareRows = (publicEvents || []).map(e => {
+          const safeTitle = String(e.title || "Untitled event").replace(/[&<>"]/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[ch]));
+          const eventId = JSON.stringify(e.id);
+          return "<div class='ticket' style='display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap'><div><b>"+safeTitle+"</b><small>"+(e.event_date?new Date(e.event_date).toLocaleDateString():"Date TBA")+" · "+String(e.location||"Venue TBA").replace(/[&<>"]/g,"")+"</small></div><div style='display:flex;gap:8px;flex-wrap:wrap'><button class='secondary' type='button' onclick='copyEventLink("+eventId+")'>COPY EVENT LINK</button><button class='secondary' type='button' onclick='sharePublishedEvent("+eventId+","+JSON.stringify(safeTitle)+")'>SHARE</button></div></div>";
+        }).join("");
+        publicSharePanel = "<section style='margin-top:24px'><h3>Share published events</h3><p class='note'>Copy any published event link and add it to your Instagram, TikTok or WhatsApp bio.</p>"+(shareRows || "<p class='note'>There are no published events available to share yet.</p>")+"</section>";
+      } else publicSharePanel = "<section style='margin-top:24px'><h3>Share published events</h3><p class='note'>Published event links could not be loaded. Please refresh and try again.</p></section>";
+    }
+    if (panel) panel.innerHTML = organizerLevelPanel + "<h3>My Events</h3>" + (["organizer","admin"].includes(profile?.role) ? "<button class='primary' style='margin:10px 0 16px' onclick='openOrganizer()'>+ CREATE ANOTHER EVENT</button>" : "") + (compactEvents.length ? compactEvents.map(e=>"<div class='ticket' style='display:flex;align-items:center;justify-content:space-between;gap:10px'><div><b>"+String(e.title).replace(/[&<>"]/g,"")+"</b><small>"+e.status.toUpperCase()+" · "+(e.event_date?new Date(e.event_date).toLocaleDateString():"Date TBA")+(e.duplicateCount>1?" · "+e.duplicateCount+" repeated submissions grouped":"")+"</small></div><button class='secondary' type='button' onclick='openEditEvent("+JSON.stringify(e.id)+")'>EDIT</button></div>").join("") : "<p class='note'>No events submitted yet. Apply to host and submit your first event.</p>") + publicSharePanel + "<button class='secondary' onclick='signOut()'>LOG OUT</button>";
     const { data: application } = await sb.from("organizer_applications").select("status").eq("user_id",auth.user.id).maybeSingle();
     if ($("applyMessage") && application) $("applyMessage").textContent = "Application status: "+application.status;
   }
